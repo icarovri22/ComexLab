@@ -1,0 +1,10 @@
+node_modules/
+.next/
+out/
+.vercel/
+.env
+.env.*
+*.pem
+*.key
+*.tsbuildinfo
+.DS_Store
