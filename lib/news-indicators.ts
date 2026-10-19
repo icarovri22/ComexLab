@@ -1,3 +1,4 @@
+export const EXCHANGE_CURRENCIES={USD:{series:1,name:'Dólar',symbol:'US$',source:'https://dadosabertos.bcb.gov.br/dataset/1-taxa-de-cambio---livre---dolar-americano-venda---diario'},EUR:{series:21619,name:'Euro',symbol:'€',source:'https://www3.bcb.gov.br/sgspub/consultarmetadados/consultarMetadadosSeries.do?method=consultarMetadadosSeriesInternet&hdOidSerieSelecionada=21619'}} as const;
 export const BCB_SOURCE='https://dadosabertos.bcb.gov.br/dataset/1-taxa-de-cambio---livre---dolar-americano-venda---diario';
 export type ExchangePoint={date:string;value:number};
 export function parseExchangeSeries(input:unknown):ExchangePoint[]{
