@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {parseOfficialFeed,classifyNews,cleanArticleUrl,plainText,validateManualNews,COUNTRY_LABELS,NEWS_CATEGORIES} from '../lib/comex-news.ts';
+const now=new Date('2026-10-09T14:00:00Z');
+const rss=`<?xml version="1.0"?><rss version="2.0"><channel><title>Feed</title><item><title><![CDATA[China announces trade tariffs &amp; adjustments]]></title><description><![CDATA[<p>Update on imports from Brazil and China.</p>]]></description><link>http://www.wto.org/english/news_e/news26_e/first.htm</link><pubDate>Thu, 08 Oct 2026 10:00:00 GMT</pubDate></item></channel></rss>`;
+test('RSS de fonte oficial analisado com data e URL HTTPS',()=>{const items=parseOfficialFeed(rss,['wto.org'],now);assert.equal(items.length,1);assert.equal(items[0].title,'China announces trade tariffs & adjustments');assert.match(items[0].url,/^https:\/\/www\.wto\.org/);assert.match(items[0].description,/Brazil and China/)});
+test('rejeita links externos não autorizados',()=>{assert.equal(cleanArticleUrl('https://fake.example/post',['wto.org']),null);assert.equal(cleanArticleUrl('javascript:alert(1)',['wto.org']),null);assert.equal(cleanArticleUrl('https://wto.org.attacker.net/post',['wto.org']),null)});
+test('rejeita publicação de datas antigas',()=>{assert.equal(parseOfficialFeed(rss.replace('08 Oct 2026','08 Oct 2022'),['wto.org'],now).length,0)});
+test('não aceita falsos feeds',()=>assert.throws(()=>parseOfficialFeed('<html></html>',['wto.org'],now)));
+test('detecta países e categoria por título',()=>{const a=classifyNews('China increases tariffs on Brazil exports','', 'wto');assert.equal(a.category,'tarifas');assert.ok(a.countries.includes('CN'));assert.ok(a.countries.includes('BR'))});
+test('MDIC é identificado como Brasil sem inferir efeito concreto',()=>{const a=classifyNews('Balança comercial divulgada','','mdic');assert.deepEqual(a.countries,['BR']);assert.match(a.impact,/podem|Pode/i)});
+test('impactos limitados a texto educacional fixo',()=>{for(const key of Object.keys(NEWS_CATEGORIES)){const a=classifyNews('News update','', 'wto');assert.ok(typeof a.impact==='string');assert.ok(COUNTRY_LABELS.GLOBAL)} });
+test('HTML não é incluído como tags de texto',()=>assert.equal(plainText('<p>Texto <strong>oficial</strong></p>'),'Texto oficial'));
+test('formulário manual aceita link seguro',()=>{const a=validateManualNews({title:'Nova medida sobre importações',summary:'O governo publicou uma consulta sobre comércio.',impact:'Pode alterar o tratamento aduaneiro.',category:'regulamentacao',countries:['BR'],source_name:'Órgão oficial',source_url:'https://www.gov.br/tema',status:'pending'});assert.ok('value' in a,a.error)});
+test('formulário manual rejeita URL maliciosa',()=>{const a=validateManualNews({title:'Nova medida sobre importações',summary:'O governo publicou uma consulta sobre comércio.',category:'geral',countries:['BR'],source_name:'Órgão oficial',source_url:'javascript:alert(1)',status:'pending'});assert.ok('error' in a)});
+test('país inválido rejeitado',()=>{const a=validateManualNews({title:'Nova medida sobre importações',summary:'O governo publicou uma consulta sobre comércio.',category:'geral',countries:['ZZ'],source_name:'Órgão oficial',source_url:'https://gov.br/x',status:'pending'});assert.ok('error' in a)});

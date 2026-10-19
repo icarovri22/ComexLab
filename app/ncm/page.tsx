@@ -1,0 +1,102 @@
+'use client';
+import {useEffect, useMemo, useState} from 'react';
+import Link from 'next/link';
+import {ArrowRight, BookOpen, Calculator, Check, ChevronLeft, ChevronRight, Clock3, Copy, ExternalLink, FileSearch, Filter, FolderTree, Globe2, Info, Layers3, Link2, LoaderCircle, Search, ShieldAlert, Star, Tags, X} from 'lucide-react';
+import {formatNcm, digits, type NcmRecord} from '../../lib/ncm';
+
+type Chapter = {code: string; description: string; count: number};
+type ApiResponse = {ok: boolean; message?: string; results?: NcmRecord[]; total?: number; chapters?: Chapter[]; source?: 'Classif' | 'BrasilAPI'; updatedAt?: string | null; complete?: boolean; consultedAt?: string};
+const CLASSIF='https://portalunico.siscomex.gov.br/classif/';
+const OFFICIAL_TABLE='https://www.gov.br/receitafederal/pt-br/assuntos/aduana-e-comercio-exterior/classificacao-fiscal-de-mercadorias/download-ncm-nomenclatura-comum-do-mercosul';
+const BUSCADOR='https://buscadorncm.com.br';
+const PAGE=24;
+const EXAMPLES=['Camiseta','6109','café','manga','máquinas'];
+const normalize=(text:string)=>text.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+function niceDate(d:string|null|undefined){if(!d)return 'Não informada';const value=d.slice(0,10);if(!/^\d{4}-\d{2}-\d{2}$/.test(value))return d;const [y,m,day]=value.split('-');return y==='9999'?'Sem data de término indicada':`${day}/${m}/${y}`;}
+const relatedLink=(code:string)=>`${BUSCADOR}/ncm/${digits(code)}`;
+
+export default function Ncm(){
+ const [q,setQ]=useState('');
+ const [debounced,setDebounced]=useState('');
+ const [chapter,setChapter]=useState('');
+ const [mode,setMode]=useState<'search'|'chapters'|'favorites'>('search');
+ const [page,setPage]=useState(0);
+ const [items,setItems]=useState<NcmRecord[]>([]);
+ const [chapters,setChapters]=useState<Chapter[]>([]);
+ const [count,setCount]=useState(0);
+ const [source,setSource]=useState('');
+ const [updatedAt,setUpdatedAt]=useState<string|null>(null);
+ const [complete,setComplete]=useState(false);
+ const [busy,setBusy]=useState(false);
+ const [chaptersBusy,setChaptersBusy]=useState(false);
+ const [error,setError]=useState('');
+ const [selected,setSelected]=useState<NcmRecord|null>(null);
+ const [favorites,setFavorites]=useState<NcmRecord[]>([]);
+ const [recents,setRecents]=useState<NcmRecord[]>([]);
+ const [copied,setCopied]=useState(false);
+ const [loadedPrefs,setLoadedPrefs]=useState(false);
+
+ useEffect(()=>{
+  try {
+   const fav=JSON.parse(localStorage.getItem('comexlab_ncm_favorites')||'[]');
+   const recent=JSON.parse(localStorage.getItem('comexlab_ncm_recent')||'[]');
+   if(Array.isArray(fav))setFavorites(fav.slice(0,70));
+   if(Array.isArray(recent))setRecents(recent.slice(0,10));
+  } catch {} finally {setLoadedPrefs(true);}
+ },[]);
+ useEffect(()=>{if(loadedPrefs)try{localStorage.setItem('comexlab_ncm_favorites',JSON.stringify(favorites));}catch{}},[favorites,loadedPrefs]);
+ useEffect(()=>{if(loadedPrefs)try{localStorage.setItem('comexlab_ncm_recent',JSON.stringify(recents));}catch{}},[recents,loadedPrefs]);
+ useEffect(()=>{const t=setTimeout(()=>setDebounced(q.trim()),350);return()=>clearTimeout(t)},[q]);
+ useEffect(()=>{
+  let stopped=false;
+  const controller=new AbortController();
+  setChaptersBusy(true);
+  fetch('/api/ncm?mode=chapters',{signal:controller.signal}).then(async response=>{
+   const json:ApiResponse=await response.json();
+   if(!response.ok||!json.ok)throw Error(json.message||'Tabela indisponível');
+   if(!stopped){setChapters(json.chapters||[]);setSource(json.source||'');setComplete(Boolean(json.complete));setUpdatedAt(json.updatedAt||null);}
+  }).catch(()=>{}).finally(()=>{if(!stopped)setChaptersBusy(false)});
+  return()=>{stopped=true;controller.abort()};
+ },[]);
+ useEffect(()=>{
+  if(mode!=='search')return;
+  if(!chapter&&debounced.length<2){setItems([]);setCount(0);setBusy(false);setError('');return;}
+  const controller=new AbortController();
+  let stopped=false;
+  const p=new URLSearchParams({limit:String(PAGE),offset:String(page*PAGE)});
+  if(chapter)p.set('chapter',chapter);
+  if(debounced)p.set('q',debounced);
+  setBusy(true);setError('');
+  fetch('/api/ncm?'+p.toString(),{signal:controller.signal}).then(async response=>{
+   const data:ApiResponse=await response.json();
+   if(!response.ok||!data.ok)throw Error(data.message||'Não foi possível consultar o NCM');
+   if(!stopped){setItems(data.results||[]);setCount(data.total||0);setSource(data.source||'');setComplete(Boolean(data.complete));setUpdatedAt(data.updatedAt||null);}
+  }).catch(err=>{if(!stopped){setItems([]);setCount(0);setError(err instanceof Error?err.message:'Serviço temporariamente indisponível')}}).finally(()=>{if(!stopped)setBusy(false)});
+  return()=>{stopped=true;controller.abort()};
+ },[debounced,chapter,page,mode]);
+ function openEntry(row:NcmRecord){setSelected(row);setCopied(false);setRecents(old=>[row,...old.filter(x=>x.code!==row.code)].slice(0,10));}
+ function favorite(row:NcmRecord){setFavorites(old=>old.some(x=>x.code===row.code)?old.filter(x=>x.code!==row.code):[row,...old].slice(0,70));}
+ function searchText(value:string){setQ(value);setChapter('');setPage(0);setMode('search');setSelected(null)}
+ function chooseChapter(value:string){setChapter(value);setQ('');setDebounced('');setPage(0);setMode('search');setSelected(null)}
+ const favoriteCodes=useMemo(()=>new Set(favorites.map(x=>x.code)),[favorites]);
+ const chosenChapter=chapters.find(c=>c.code===chapter);
+ const hasSearch=!!chapter||debounced.length>=2;
+ const results=mode==='favorites'?favorites:items;
+ const sourceLabel=source==='Classif'?'Receita Federal · Classif':source==='BrasilAPI'?'BrasilAPI · fonte alternativa':'Consulta oficial em preparação';
+ const sourceDescription=source==='Classif'?'Tabela vigente disponibilizada pela Receita Federal.':'Fonte alternativa: valide a vigência e o enquadramento no Classif antes de usar.';
+ const breakdown=selected?digits(selected.code):'';
+ const selectedHasFavorite=!!selected&&favoriteCodes.has(selected.code);
+ const more=page*PAGE+PAGE<count;
+ return <div className="ncm-page">
+  <div className="ncm-head"><div><span className="eyebrow">BASE FISCAL · NOMENCLATURA COMUM DO MERCOSUL</span><h1>Consulta NCM</h1><p className="page-lead">Pesquise códigos de mercadorias, leia descrições oficiais, explore capítulos e confira a origem das informações. Consulte os detalhes tributários por código antes de utilizar uma classificação em uma operação real.</p></div><div className="ncm-head-icon"><FileSearch size={31}/><span>Fiscal e aduaneiro</span></div></div>
+  <section className="panel ncm-search-panel" aria-label="Pesquisa de NCM"><label className="label" htmlFor="ncm-search">Código NCM ou descrição da mercadoria</label><div className="ncm-searchbox"><Search size={21}/><input id="ncm-search" value={q} onChange={event=>{setQ(event.target.value);setPage(0);setMode('search');setChapter('')}} placeholder="Ex.: 6109.10.00, camiseta, café, máquina…" maxLength={90} autoComplete="off"/>{q&&<button aria-label="Limpar pesquisa" title="Limpar pesquisa" type="button" onClick={()=>searchText('')}><X size={18}/></button>}</div><div className="ncm-suggestions"><span>Experimente:</span>{EXAMPLES.map(text=><button type="button" key={text} onClick={()=>searchText(text)}>{text}</button>)}</div><div className="ncm-source-status"><span className="ncm-live-dot" aria-hidden="true"/><strong>{sourceLabel}</strong><span>{updatedAt?`Atualização informada: ${niceDate(updatedAt)}`:'Vigência sujeita à confirmação'}</span>{source==='BrasilAPI'&&<span className="ncm-source-warning">Fonte alternativa em uso</span>}</div></section>
+  <div className="ncm-tabs" role="tablist" aria-label="Modos de consulta"><button role="tab" aria-selected={mode==='search'} className={mode==='search'?'current':''} onClick={()=>setMode('search')}><Search size={17}/> Pesquisar</button><button role="tab" aria-selected={mode==='chapters'} className={mode==='chapters'?'current':''} onClick={()=>setMode('chapters')}><FolderTree size={17}/> Capítulos {chapters.length>0&&`(${chapters.length})`}</button><button role="tab" aria-selected={mode==='favorites'} className={mode==='favorites'?'current':''} onClick={()=>setMode('favorites')}><Star size={16}/> Favoritos ({favorites.length})</button></div>
+  {mode==='chapters'&&<section className="ncm-section"><div className="ncm-heading"><div><h2>Explorar por capítulo</h2><p>Abra um dos capítulos e visualize seus códigos NCM. A lista é obtida da tabela oficial quando disponível.</p></div>{chaptersBusy&&<LoaderCircle size={19} className="ncm-spin"/>}</div>{chapters.length>0?<div className="ncm-chapters">{chapters.map(ch=><button type="button" key={ch.code} className="ncm-chapter" onClick={()=>chooseChapter(ch.code)}><span className="ncm-chapter-id">{ch.code}</span><span><strong>{ch.description}</strong><small>{ch.count.toLocaleString('pt-BR')} NCMs</small></span><ArrowRight size={17}/></button>)}</div>:<div className="panel ncm-empty"><Info size={22}/><h3>Tabela de capítulos temporariamente indisponível</h3><p>A Receita pode estar indisponível. Você ainda pode pesquisar por código ou descrição usando a fonte alternativa.</p><button className="btn secondary" onClick={()=>setMode('search')}>Voltar à pesquisa</button></div>}</section>}
+  {mode==='search'&&<section className="ncm-section"><div className="ncm-heading"><div><h2>{chosenChapter?`Capítulo ${chosenChapter.code}`:hasSearch?'Resultados da consulta':'Pesquisar mercadorias'}</h2><p>{chosenChapter?.description||(hasSearch?`${count.toLocaleString('pt-BR')} código(s) encontrado(s)${!complete?' · consulta parcial à fonte alternativa':''}`:'Digite um produto, um código ou navegue pelos capítulos para começar.')}</p></div>{chapter&&<button className="ncm-clear" onClick={()=>chooseChapter('')}><X size={16}/> Remover filtro</button>}</div>{busy&&<div className="panel ncm-loading"><LoaderCircle className="ncm-spin" size={25}/> Pesquisando fontes oficiais…</div>}{!busy&&error&&<div className="panel ncm-empty"><ShieldAlert size={25}/><h3>Não foi possível concluir a pesquisa</h3><p>{error}</p><a className="btn secondary" target="_blank" rel="noopener noreferrer" href={CLASSIF}>Abrir Classif <ExternalLink size={15}/></a></div>}{!busy&&!error&&!hasSearch&&<div className="ncm-starter"><div className="panel"><Layers3 size={25}/><h3>Mais que quatro exemplos</h3><p>Agora a busca consulta uma base pública de classificações, permitindo pesquisar mercadorias além das demonstrações anteriores.</p></div><div className="panel"><Tags size={25}/><h3>Hierarquia do NCM</h3><p>Capítulo, posição, subposição HS, item e subitem do Mercosul em uma mesma ficha.</p></div><div className="panel"><Globe2 size={25}/><h3>Fontes fiscais</h3><p>Atalhos para verificar alíquotas, CEST, NESH, acordos comerciais e situação legal.</p></div></div>}{!busy&&!error&&hasSearch&&items.length===0&&<div className="panel ncm-empty"><Search size={23}/><h3>Nenhum código identificado</h3><p>Confira a grafia ou tente uma descrição mais ampla. Uma busca sem resultado não autoriza escolher um NCM semelhante.</p></div>}{!busy&&items.length>0&&<><div className="ncm-results">{items.map(row=><article className={'ncm-result'+(selected?.code===row.code?' focused':'')} key={row.code}><div className="ncm-result-top"><span className="ncm-code">{row.code}</span><button className={'ncm-star'+(favoriteCodes.has(row.code)?' active':'')} title={favoriteCodes.has(row.code)?'Remover favorito':'Salvar como favorito'} aria-label={favoriteCodes.has(row.code)?'Remover favorito':'Salvar como favorito'} onClick={()=>favorite(row)}><Star size={19} fill={favoriteCodes.has(row.code)?'currentColor':'none'}/></button></div><p className="ncm-result-title">{row.description}</p>{row.headingDescription&&<p className="ncm-result-parent">{row.heading} · {row.headingDescription}</p>}<div className="ncm-result-bottom"><span>Cap. {row.chapter} · HS {row.subheading}</span><button onClick={()=>openEntry(row)}>Ver ficha <ArrowRight size={16}/></button></div></article>)}</div><div className="ncm-paging"><span>{page*PAGE+1}–{Math.min((page+1)*PAGE,count)} de {count.toLocaleString('pt-BR')}</span><div><button type="button" disabled={page===0} onClick={()=>{setPage(x=>Math.max(0,x-1));setSelected(null)}}><ChevronLeft size={17}/> Anterior</button><button type="button" disabled={!more} onClick={()=>{setPage(x=>x+1);setSelected(null)}}>Próxima <ChevronRight size={17}/></button></div></div></>}</section>}
+  {mode==='favorites'&&<section className="ncm-section"><div className="ncm-heading"><div><h2>Códigos salvos</h2><p>Salvos somente neste navegador. Confirme a vigência dos códigos antes de reutilizá-los.</p></div></div>{favorites.length===0?<div className="panel ncm-empty"><Star size={23}/><h3>Nenhum NCM salvo</h3><p>Pesquise uma mercadoria e selecione a estrela para guardar o código.</p></div>:<div className="ncm-results">{favorites.map(row=><article className="ncm-result" key={row.code}><div className="ncm-result-top"><span className="ncm-code">{row.code}</span><button className="ncm-star active" aria-label="Remover favorito" onClick={()=>favorite(row)}><Star size={19} fill="currentColor"/></button></div><p>{row.description}</p><div className="ncm-result-bottom"><span>Cap. {row.chapter}</span><button onClick={()=>openEntry(row)}>Ver ficha <ArrowRight size={16}/></button></div></article>)}</div>}</section>}
+  {selected&&<section className="ncm-details" id="ncm-ficha" aria-label="Ficha detalhada de NCM"><div className="ncm-detail-heading"><div><span className="eyebrow">FICHA DE CLASSIFICAÇÃO · {selected.source}</span><h2>{selected.code}</h2><p>{selected.description}</p></div><button className="ncm-close" aria-label="Fechar ficha" onClick={()=>setSelected(null)}><X size={19}/></button></div><div className="ncm-ficha-actions"><button type="button" className="btn secondary" onClick={async()=>{try{await navigator.clipboard.writeText(selected.code);setCopied(true)}catch{setCopied(false)}}}>{copied?<Check size={16}/>:<Copy size={16}/>} {copied?'Copiado':'Copiar NCM'}</button><button type="button" className="btn secondary" onClick={()=>favorite(selected)}><Star size={16} fill={selectedHasFavorite?'currentColor':'none'}/> {selectedHasFavorite?'Salvo':'Favoritar'}</button><Link href={`/simuladores?ncm=${digits(selected.code)}&produto=${encodeURIComponent(selected.description)}`} className="btn"><Calculator size={17}/> Usar no simulador</Link></div><div className="ncm-detail-grid"><div className="ncm-hierarchy"><h3><Layers3 size={19}/> Estrutura da classificação</h3><div><small>Capítulo · 2 dígitos</small><strong>{selected.chapter}</strong><p>{selected.chapterDescription||'Consulte a descrição no Classif'}</p></div><div><small>Posição · 4 dígitos</small><strong>{selected.heading}</strong><p>{selected.headingDescription||'Consulte a descrição no Classif'}</p></div><div><small>Subposição HS · 6 dígitos</small><strong>{selected.subheading}</strong><p>{selected.subheadingDescription||'Subposição internacional; confira as notas explicativas'}</p></div><div className="ncm-final"><small>Mercosul · 8 dígitos</small><strong>{selected.code}</strong><p>{selected.description}</p></div></div><div className="ncm-legal"><h3><Clock3 size={18}/> Referência normativa</h3><dl><dt>Início de vigência informado</dt><dd>{niceDate(selected.startDate)}</dd><dt>Fim de vigência informado</dt><dd>{niceDate(selected.endDate)}</dd><dt>Ato normativo informado</dt><dd>{selected.legalAct||'Verifique o ato no Classif'}</dd><dt>Fonte consultada</dt><dd>{selected.source}</dd></dl><div className="info"><Info size={16} style={{verticalAlign:'middle',marginRight:5}}/>A consulta de um código não comprova que ele seja adequado à mercadoria. Verifique material, função, notas de seção/capítulo, RGI e NESH.</div></div></div><div className="ncm-detail-fiscal"><h3>Conferência tributária e regulatória</h3><p>Para este NCM, consulte alíquotas e enquadramentos específicos nas fontes vinculadas. Esses dados <strong>não estão automaticamente validados</strong> nesta ficha.</p><div className="ncm-fiscal-links"><a href={relatedLink(selected.code)} target="_blank" rel="noopener noreferrer"><Tags size={20}/><strong>IPI, II, CEST, NESH e enquadramentos</strong><span>Ficha de referência no Buscador NCM <ExternalLink size={14}/></span></a><a href={CLASSIF} target="_blank" rel="noopener noreferrer"><FileSearch size={20}/><strong>Validação oficial da NCM</strong><span>Classif da Receita Federal <ExternalLink size={14}/></span></a><a href="https://www4.receita.fazenda.gov.br/simulador/" target="_blank" rel="noopener noreferrer"><Calculator size={20}/><strong>Simular tratamento tributário</strong><span>Simulador da Receita Federal <ExternalLink size={14}/></span></a></div></div></section>}
+  <section className="ncm-knowledge"><h2>O que consultar além da descrição NCM?</h2><div className="ncm-knowledge-grid"><article><h3>IPI e TIPI</h3><p>A alíquota depende da classificação e das regras e exceções previstas na tabela vigente.</p></article><article><h3>Imposto de Importação (II)</h3><p>Consulte a tarifa aplicada ao NCM, exceções tarifárias, acordos, cotas e origem da mercadoria.</p></article><article><h3>CEST e ICMS-ST</h3><p>O CEST não equivale ao NCM. A incidência de substituição tributária depende do produto e da operação.</p></article><article><h3>NESH e regras de classificação</h3><p>Notas explicativas e regras interpretativas ajudam a distinguir códigos semelhantes.</p></article><article><h3>Reforma tributária (IBS/CBS)</h3><p>CST e cClassTrib dependem da operação e dos regimes legais; não são determinados apenas pelo NCM.</p></article><article><h3>Licenças e defesa comercial</h3><p>Verifique tratamento administrativo, requisitos do produto, antidumping e regimes especiais.</p></article></div><div className="ncm-resources"><a href={BUSCADOR} target="_blank" rel="noopener noreferrer"><Link2 size={17}/> Buscador NCM — referência complementar <ExternalLink size={14}/></a><a href={OFFICIAL_TABLE} target="_blank" rel="noopener noreferrer"><Globe2 size={17}/> Receita Federal — download da tabela vigente <ExternalLink size={14}/></a><a href="https://brasilapi.com.br/docs" target="_blank" rel="noopener noreferrer"><BookOpen size={17}/> BrasilAPI — documentação NCM <ExternalLink size={14}/></a></div></section>
+  {recents.length>0&&<section className="ncm-history"><h2>Consultas recentes</h2><div className="ncm-recent-tags">{recents.slice(0,8).map(row=><button key={row.code} onClick={()=>openEntry(row)}>{row.code}</button>)}</div></section>}
+  <div className="ncm-caution"><ShieldAlert size={20}/><p>Os resultados auxiliam na pesquisa, mas não substituem a análise técnica nem uma solução de consulta formal. Alíquotas, tributos e benefícios dependem da legislação vigente e das características da operação. {sourceDescription}</p></div>
+ </div>;
+}

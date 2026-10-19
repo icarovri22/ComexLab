@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {test} from 'node:test';
+import {AI_DEFAULT_DAILY_LIMIT,AI_MAX_DAILY_LIMIT,AI_MAX_QUESTION_LENGTH,clampDailyLimit,validateQuestion,answerFromResponse,validRating} from '../lib/comex-ai.ts';
+const api=readFileSync(new URL('../app/api/ia/route.ts',import.meta.url),'utf8');
+const admin=readFileSync(new URL('../app/api/admin/route.ts',import.meta.url),'utf8');
+test('limite diario é validado em 1-30',()=>{assert.equal(clampDailyLimit(10),10);assert.equal(clampDailyLimit(-5),1);assert.equal(clampDailyLimit(99),AI_MAX_DAILY_LIMIT);assert.equal(clampDailyLimit('x'),AI_DEFAULT_DAILY_LIMIT)});
+test('validação da pergunta',()=>{assert.equal(validateQuestion('  o que é CIF?  '),'o que é CIF?');assert.equal(validateQuestion('  '),null);assert.equal(validateQuestion('x'.repeat(AI_MAX_QUESTION_LENGTH+1)),null)});
+test('avaliação estrita',()=>{assert.equal(validRating('up'),true);assert.equal(validRating('down'),true);assert.equal(validRating('admin'),false)});
+test('extração da resposta ignora outras partes',()=>{assert.equal(answerFromResponse({output:[{type:'reasoning',content:[{type:'output_text',text:'não'}]},{type:'message',content:[{type:'output_text',text:'Explicação.'}]}]}),'Explicação.');assert.equal(answerFromResponse({}), '')});
+test('limite, autenticação, CSRF e isolamento são impostos pelo servidor',()=>{assert.match(api,/verifiedAccount/);assert.match(api,/sameOrigin\(req\)/);assert.match(api,/ON CONFLICT\(user_id,day_utc,daily_slot\) DO NOTHING/);assert.match(api,/WHERE id=\$\{id\} AND user_id=\$\{me.id\}/);assert.match(api,/store:false/);assert.match(api,/OPENAI_API_KEY/)});
+test('admin ajusta limites e permite pausar',()=>{assert.match(admin,/view==='ai'/);assert.match(admin,/action==='ai.settings'/);assert.match(admin,/ai_daily_limit/);assert.match(admin,/ai_enabled/)});
