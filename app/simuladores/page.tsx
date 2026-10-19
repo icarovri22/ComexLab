@@ -212,6 +212,7 @@ export default function Simuladores(){
 
 
   useEffect(()=>{
+    if(!storageReady)return;
     const params=new URLSearchParams(window.location.search);
     const kind=params.get('tipo');
     if(kind==='exportacao') {setOp('export');setOriginCode('BR');setDestinationCode('NL');}
@@ -220,7 +221,8 @@ export default function Simuladores(){
     if(code&&/^\d{8}$/.test(code))setNcm(code.replace(/^(\d{4})(\d{2})(\d{2})$/,'$1.$2.$3'));
     const name=params.get('produto');
     if(name)setProduct(name.slice(0,160));
-  },[]);
+    if(code&&/^\d{8}$/.test(code))setStep(0);
+  },[storageReady]);
 
   useEffect(()=>{
     if(!wasWizardInitialized.current){
