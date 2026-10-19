@@ -46,13 +46,14 @@ export async function translateToPortuguese(input:string,providerFetch:typeof fe
 }
 
 // Uses the same tagged-query connection as the existing news module.
-export async function translatePendingNews(sql:ReturnType<typeof import('./admin-auth').queryDB>){
+export async function translatePendingNews(sql:ReturnType<typeof import('./admin-auth').queryDB>,deadline=Date.now()+45_000){
   const rows=await sql`SELECT id::text,title,summary FROM comexlab_news
     WHERE translation_status='pending' AND source_slug IN ('ec','wto')
       AND (translation_attempted_at IS NULL OR translation_attempted_at<NOW()-INTERVAL '45 minutes')
     ORDER BY published_at DESC NULLS LAST,id DESC LIMIT ${MAX_TRANSLATIONS_PER_SYNC}`;
   let translated=0,failed=0,quotaExhausted=false;
   for(const row of rows){
+    if(Date.now()+2*TRANSLATION_REQUEST_TIMEOUT_MS+1500>deadline)break;
     const title=translationInput(String(row.title),470);
     const summary=translationInput(String(row.summary||''),465);
     const units=title.length+summary.length;

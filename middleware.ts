@@ -1,8 +1,10 @@
 import {NextRequest,NextResponse} from 'next/server';
 import {jwtVerify} from 'jose';
+import {isNewsCronRequest} from './lib/news-cron';
 export async function middleware(req:NextRequest){
  if(process.env.AUTH_REQUIRED!=='true')return NextResponse.next();
  const path=req.nextUrl.pathname;
+ if(isNewsCronRequest(req.method,path))return NextResponse.next();
  if(path==='/login'||path==='/recuperar'||path==='/redefinir'||path.startsWith('/api/email-recovery')||path.startsWith('/api/auth')||path.startsWith('/api/recovery'))return NextResponse.next();
  const jwt=req.cookies.get('comexlab_session')?.value;
  if(jwt&&process.env.AUTH_SECRET){

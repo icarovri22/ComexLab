@@ -3,12 +3,13 @@ import {classifyNews,parseOfficialFeed,cleanArticleUrl} from './comex-news';
 import {translatePendingNews} from './news-translation';
 
 const ALLOWED_FEEDS:Record<string,{url:string;allowedHosts:string[]}>= {
- mdic:{url:'https://www.gov.br/mdic/pt-br/assuntos/comercio-exterior/estatisticas/informativos/RSS',allowedHosts:['gov.br']},
+ mdic:{url:'https://www.gov.br/mdic/pt-br/assuntos/noticias/RSS',allowedHosts:['gov.br']},
  wto:{url:'https://www.wto.org/library/rss/latest_news_e.xml',allowedHosts:['wto.org']},
  ec:{url:'https://policy.trade.ec.europa.eu/node/2/rss_en',allowedHosts:['europa.eu']}
 };
 export async function synchronizeNews(){
  const sql=queryDB();
+ const deadline=Date.now()+48_000;
  // Atomic lease avoids overlapping cron and admin runs, even from different workers.
  const acquired=await sql`UPDATE comexlab_news_sync_lock SET leased_until=NOW()+INTERVAL '4 minutes' WHERE id=1 AND leased_until<NOW() RETURNING id`;
  if(!acquired.length)return {alreadyRunning:true,added:0,checked:0,failures:0};
@@ -27,7 +28,8 @@ export async function synchronizeNews(){
     let target=safe.url;
     let response:Response|undefined;
     for(let hop=0;hop<=3;hop++){
-     response=await fetch(target,{headers:{'Accept':'application/rss+xml,application/atom+xml,application/xml,text/xml;q=0.9','User-Agent':'ComexHub-News/1.7 (+https://comexhub-app.vercel.app/noticias)'},redirect:'manual',signal:AbortSignal.timeout(9000),cache:'no-store'});
+     const remaining=deadline-Date.now();if(remaining<1500)throw Error('Consulta adiada para respeitar o tempo máximo');
+     response=await fetch(target,{headers:{'Accept':'application/rss+xml,application/atom+xml,application/xml,text/xml;q=0.9','User-Agent':'ComexHub-News/1.7 (+https://comexhub-app.vercel.app/noticias)'},redirect:'manual',signal:AbortSignal.timeout(Math.min(9000,deadline-Date.now())),cache:'no-store'});
      if(![301,302,303,307,308].includes(response.status))break;
      const location=response.headers.get('location');
      if(hop===3||!location)throw Error('Redirecionamento não permitido');
@@ -41,6 +43,7 @@ export async function synchronizeNews(){
     const items=parseOfficialFeed(xml,safe.allowedHosts);
     if(!items.length)throw Error('Nenhum item recente e válido no feed');
     for(const article of items){
+     if(Date.now()>deadline-4000)break;
      const metadata=classifyNews(article.title,article.description,slug);
      const countries=metadata.countries.join(',');
      const inPortuguese=slug==='mdic';
@@ -56,7 +59,7 @@ export async function synchronizeNews(){
    }
   }
   let translations={translated:0,failed:0,quotaExhausted:false};
-  try{translations=await translatePendingNews(sql)}catch(err){errors.push('Tradução: '+(err instanceof Error?err.message:'erro desconhecido').slice(0,125));}
+  try{translations=await translatePendingNews(sql,deadline)}catch(err){errors.push('Tradução: '+(err instanceof Error?err.message:'erro desconhecido').slice(0,125));}
   const state=failures===0?'ok':failures===checked?'error':'partial';
   const translationNote=`Traduções para português: ${translations.translated}; aguardando: ${translations.failed}${translations.quotaExhausted?' (limite diário atingido)':''}`;
   await sql`UPDATE comexlab_news_sync_runs SET completed_at=NOW(),status=${state},sources_checked=${checked},items_added=${added},details=${[...errors,translationNote].join(' | ').slice(0,1200)} WHERE id=${runId}`;
