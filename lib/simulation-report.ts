@@ -3,6 +3,7 @@ export type ReportLine={label:string;value:string};
 export type ReportSection={title:string;lines:ReportLine[]};
 export type ReportSource={name:string;url:string};
 export type SimulationReport={
+  serverId?:string;
   generatedAt:string;
   operation:string;
   route:string;

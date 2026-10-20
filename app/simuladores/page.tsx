@@ -7,6 +7,7 @@ import {INCOTERMS,allocate,getIncoterm,isCompatible} from '../../lib/incoterms';
 import {calculateBrazilImport,calculateDestinationTax,formatBrl,formatUsd,numberFrom,hasRate} from '../../lib/calc';
 import SimulationReportView from './SimulationReportView';
 import SimulationHistory from './SimulationHistory';
+import {chooseSimulationDraft,readStoredJson,mergeSimulationHistory} from '../../lib/simulation-storage';
 import {createSimulationReport,type SimulationReport,type ReportSection} from '../../lib/simulation-report';
 import {findCountries,flagForCountryCode,isCrossBorder,isIntraEU,normalizeContinent,tariffReferences,taxRegimeFor,type Country} from '../../lib/markets';
 
@@ -149,6 +150,7 @@ export default function Simuladores(){
   const [storageOwner,setStorageOwner]=useState<string|null>(null);
   const [storageReady,setStorageReady]=useState(false);
   const [history,setHistory]=useState<SimulationReport[]>([]);
+  const [storageNotice,setStorageNotice]=useState('');
   useEffect(()=>{
     let active=true;
     fetch('/api/auth',{cache:'no-store'}).then(r=>r.json()).then(async user=>{
@@ -157,9 +159,11 @@ export default function Simuladores(){
       if(!username){setStorageOwner(null);setStorageReady(true);return;}
       setStorageOwner(username);
       try{
-        const saved=JSON.parse(localStorage.getItem(`comexhub:sim:draft:${username}`)||'null');
+        const remote=await fetch('/api/simulations',{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null);
+        if(!active)return;
+        const saved=chooseSimulationDraft(readStoredJson(`comexhub:sim:draft:${username}`),remote?.draft);
         if(saved&&typeof saved==='object'){
-          if(typeof saved.op==='string')setOp(saved.op);
+          if(saved.op==='import'||saved.op==='export')setOp(saved.op);
           if(typeof saved.originCode==='string')setOriginCode(saved.originCode);
           if(typeof saved.destinationCode==='string')setDestinationCode(saved.destinationCode);
           if(typeof saved.product==='string')setProduct(saved.product);
@@ -183,16 +187,16 @@ export default function Simuladores(){
           if(typeof saved.pis==='string')setPis(saved.pis);
           if(typeof saved.cofins==='string')setCofins(saved.cofins);
           if(typeof saved.icms==='string')setIcms(saved.icms);
-          if(Array.isArray(saved.checked))setChecked(saved.checked);
-          if(Number.isInteger(saved.step)&&saved.step>=0&&saved.step<=5)setStep(saved.step);
+          if(Array.isArray(saved.checked))setChecked(saved.checked.filter((value):value is string=>typeof value==='string'));
+          if(typeof saved.step==='number'&&Number.isInteger(saved.step)&&saved.step>=0&&saved.step<=5)setStep(saved.step);
         }
-        const remote=await fetch('/api/simulations',{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null);
-        const past=remote?.history??JSON.parse(localStorage.getItem(`comexhub:sim:history:${username}`)||'[]');
-
-        if(Array.isArray(past))setHistory(past.filter(item=>item&&typeof item.generatedAt==='string'&&Array.isArray(item.sections)).slice(0,30));
+        const restored=mergeSimulationHistory(remote?.history,readStoredJson(`comexhub:sim:history:${username}`));
+        setHistory(restored);
+        try{localStorage.setItem(`comexhub:sim:history:${username}`,JSON.stringify(restored))}catch{}
+        if(!remote)setStorageNotice('Servidor de simulações indisponível. Usando os dados deste navegador.');
       }catch{ /* Ignore damaged browser storage. */ }
-      setStorageReady(true);
-    }).catch(()=>setStorageReady(true));
+      if(active)setStorageReady(true);
+    }).catch(()=>{if(active)setStorageReady(true)});
     return ()=>{active=false};
   },[]);
   useEffect(()=>{
@@ -200,14 +204,33 @@ export default function Simuladores(){
     try{localStorage.setItem(`comexhub:sim:draft:${storageOwner}`,JSON.stringify({op,originCode,destinationCode,product,ncm,modal,term,qty,unit,fx,origin,loading,freight,insurance,lastMile,unloading,fees,destDuty,vat,ii,ipi,pis,cofins,icms,checked,step}));}catch{/* Storage may be disabled or full. */}
     const timer=setTimeout(()=>{fetch('/api/simulations',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({op,originCode,destinationCode,product,ncm,modal,term,qty,unit,fx,origin,loading,freight,insurance,lastMile,unloading,fees,destDuty,vat,ii,ipi,pis,cofins,icms,checked,step})}).catch(()=>{})},900);return ()=>clearTimeout(timer);
   },[storageOwner,storageReady,op,originCode,destinationCode,product,ncm,modal,term,qty,unit,fx,origin,loading,freight,insurance,lastMile,unloading,fees,destDuty,vat,ii,ipi,pis,cofins,icms,checked,step]);
-  function saveSimulation(data:SimulationReport){
+  async function saveSimulation(data:SimulationReport){
     if(!storageOwner)return;
-    fetch('/api/simulations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).catch(()=>{});
+    setStorageNotice('Salvando relatório…');
+    let saved:SimulationReport=data;
+    try{
+      const response=await fetch('/api/simulations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+      if(!response.ok)throw Error('Não foi possível salvar no servidor.');
+      const result=await response.json();if(typeof result.id!=='string')throw Error('Resposta inválida.');
+      saved={...data,serverId:result.id};setStorageNotice('Relatório salvo na sua conta.');
+    }catch{setStorageNotice('Relatório salvo somente neste navegador. A gravação no servidor falhou.');}
     setHistory(previous=>{
-      const next=[data,...previous].slice(0,30);
+      const next=[saved,...previous].slice(0,30);
       try{localStorage.setItem(`comexhub:sim:history:${storageOwner}`,JSON.stringify(next));}catch{}
       return next;
     });
+  }
+  async function deleteSimulation(index:number){
+    if(!storageOwner)return;
+    const row=history[index];if(!row)return;
+    try{
+      if(row.serverId){
+        const response=await fetch('/api/simulations?id='+encodeURIComponent(row.serverId),{method:'DELETE'});
+        if(!response.ok)throw Error('Falha ao excluir.');
+      }
+      setHistory(previous=>{const next=previous.filter(item=>item!==row);try{localStorage.setItem(`comexhub:sim:history:${storageOwner}`,JSON.stringify(next))}catch{}return next;});
+      setStorageNotice('Relatório excluído do histórico.');
+    }catch{setStorageNotice('Não foi possível excluir o relatório. Tente novamente.');throw Error('Falha ao excluir relatório.');}
   }
 
 
@@ -568,7 +591,8 @@ export default function Simuladores(){
         <div className="info"><BookOpen size={17} style={{verticalAlign:'middle',marginRight:6}}/>Simulação educacional: o uso de dados corretos de classificação, tributação, origem e restrições de cada país é responsabilidade de quem realiza a operação.</div>
       </div></aside>
     </div>
-    <SimulationHistory reports={history} enabled={Boolean(storageOwner)} onDelete={(index)=>{if(!storageOwner)return;setHistory(previous=>{const next=previous.filter((_,i)=>i!==index);try{localStorage.setItem(`comexhub:sim:history:${storageOwner}`,JSON.stringify(next))}catch{}return next})}}/>
+    {storageNotice&&<p className="help" role="status" aria-live="polite">{storageNotice}</p>}
+    <SimulationHistory reports={history} enabled={Boolean(storageOwner)} onDelete={deleteSimulation}/>
     {step===steps.length-1&&report&&<SimulationReportView report={report.data} stale={report.signature!==currentSignature} onRegenerate={generateReport}/>}
   </>;
 }

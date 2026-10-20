@@ -26,7 +26,7 @@ const countryExpressions:ReadonlyArray<[string,RegExp]>=[
 ];
 const categoryRules:ReadonlyArray<[NewsCategory,RegExp]>=[
  ['tarifas',/tariff|tarifa|duty|duties|imposto|anti.dump|antidumping|trade remedy|surcharge|sobretaxa/i],
- ['logistica',/shipping|port|freight|container|logistic|maritime|navio|porto|frete|logístic|canal de suez|red sea/i],
+ ['logistica',/shipping|\bports?\b|freight|container|logistic|maritime|navio|\bportos?\b|frete|logístic|canal de suez|red sea/i],
  ['acordos',/agreement|accord|negotiat|free.trade|treaty|acordo|negocia|parceria comercial|fta\b/i],
  ['regulamentacao',/regulation|regulament|compliance|customs|aduan|license|licen[çc]a|sanction|san[çc][ãa]o|drawback|export control/i],
  ['riscos',/disruption|conflict|war\b|crisis|crise|guerra|bloqueio|risco|embargo/i],

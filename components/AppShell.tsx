@@ -5,13 +5,14 @@ import {usePathname} from 'next/navigation';
 import {LayoutDashboard, ArrowLeftRight, BookOpen, Search, UserRound, PackageCheck,ShieldCheck,MessageSquareHeart,Newspaper} from 'lucide-react';
 import BrandLogo from './BrandLogo';
 import ThemePicker from './ThemePicker';
+import {isPublicAuthPage} from '../lib/auth-pages';
 const pages=[{href:'/',label:'Visão geral',icon:LayoutDashboard},{href:'/simuladores',label:'Simuladores',icon:ArrowLeftRight},{href:'/ncm',label:'Consulta NCM',icon:Search},{href:'/estudos',label:'Trilha de estudos',icon:BookOpen},{href:'/seguranca',label:'Segurança',icon:ShieldCheck},{href:'/avaliar',label:'Avaliar e sugerir',icon:MessageSquareHeart},{href:'/noticias',label:'Comex News',icon:Newspaper},{href:'/login',label:'Minha conta',icon:UserRound}];
 export default function AppShell({children}:{children:React.ReactNode}){
  const pathname=usePathname();
  const [admin,setAdmin]=useState(false);
  const [notice,setNotice]=useState('');
- useEffect(()=>{let mounted=true;Promise.all([fetch('/api/auth',{cache:'no-store'}).then(r=>r.json()),fetch('/api/site',{cache:'no-store'}).then(r=>r.json())]).then(([user,settings])=>{if(!mounted)return;setAdmin(user?.isAdmin===true);setNotice(String(settings?.announcement||''));if(user?.ready===true&&user?.loggedIn===false&&pathname!=='/login'&&pathname!=='/recuperar')window.location.replace('/login')}).catch(()=>{});return()=>{mounted=false}},[pathname]);
- if(pathname==='/login'||pathname==='/recuperar')return <>{children}</>;
+ useEffect(()=>{let mounted=true;Promise.all([fetch('/api/auth',{cache:'no-store'}).then(r=>r.json()),fetch('/api/site',{cache:'no-store'}).then(r=>r.json())]).then(([user,settings])=>{if(!mounted)return;setAdmin(user?.isAdmin===true);setNotice(String(settings?.announcement||''));if(user?.ready===true&&user?.loggedIn===false&&!isPublicAuthPage(pathname))window.location.replace('/login')}).catch(()=>{});return()=>{mounted=false}},[pathname]);
+ if(isPublicAuthPage(pathname))return <>{children}</>;
  return <div className="shell"><aside className="sidebar">
   <Link href="/" className="brand" aria-label="ComexHub — página inicial"><BrandLogo/></Link>
   <nav className="nav-list" aria-label="Navegação principal">{pages.map(p=><Link key={p.href} href={p.href} className={pathname===p.href?'active':''}><p.icon size={18}/><span>{p.label}</span></Link>)}{admin&&<Link href='/admin' className={pathname==='/admin'?'active':''}><ShieldCheck size={18}/><span>Administração</span></Link>}</nav>
