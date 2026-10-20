@@ -132,6 +132,6 @@ export default function Login(){
         </div>
       </section>
     </main>
-    <footer className="auth-footer">ComexHub · Ferramenta educacional. <span>Desenvolvido por <strong>Hanna Roncel e Ícaro Pinheiro</strong>.</span></footer>
+    <footer className="auth-footer">ComexHub · Ferramenta educacional. <span>Desenvolvido por <strong>Hanna Roncel e Ícaro Pinheiro</strong>.</span><span>Contato: <a href="mailto:comexhub.contato@gmail.com" style={{overflowWrap:'anywhere'}}>comexhub.contato@gmail.com</a></span></footer>
   </div>;
 }
