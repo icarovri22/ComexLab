@@ -1,0 +1,15 @@
+/* The document is independent of the workspace palette, on screen and in print. */
+#simulation-printable{color-scheme:light;background:#fff!important;color:#000!important;border-color:#ccc!important;box-shadow:none!important}
+#simulation-printable *,#simulation-printable *::before,#simulation-printable *::after{color:#000!important;background-color:#fff!important;background-image:none!important;border-color:#ccc!important;box-shadow:none!important;text-shadow:none!important}
+#simulation-printable .simulation-report-header{border-bottom-color:#000!important}
+#simulation-printable .simulation-report-total{background:#fff!important;color:#000!important;border-top:2px solid #000!important;border-bottom:2px solid #000!important;border-radius:0}
+#simulation-printable .simulation-report-intro>div{background:#fff!important}
+#simulation-printable .simulation-report-brand,#simulation-printable .simulation-report-brand span{color:#000!important}
+#simulation-printable .simulation-report-warnings{background:#fff!important;border-color:#888!important}
+#simulation-printable .simulation-report-sources a{color:#000!important;text-decoration:underline}
+#simulation-printable .simulation-report-disclaimer{border-top-color:#000!important}
+@media print{
+ html:has(#simulation-printable){background:#fff!important;color-scheme:light!important}
+ html body:has(#simulation-printable),html body:has(#simulation-printable) .shell,html body:has(#simulation-printable) .main-frame,html body:has(#simulation-printable) .content,html body:has(#simulation-printable) .simulation-report-section{color-scheme:light!important;background:#fff!important;color:#000!important;box-shadow:none!important}
+ #simulation-printable{print-color-adjust:exact;-webkit-print-color-adjust:exact}
+}

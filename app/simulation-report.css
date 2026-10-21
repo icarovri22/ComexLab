@@ -29,9 +29,9 @@
 }
 
 /* Refinamento editorial dos relatórios: legibilidade na tela e no papel. */
-.simulation-report-section{box-shadow:0 10px 32px rgba(56,36,31,.055)}
+.simulation-report-section{box-shadow:0 10px 32px rgba(var(--palette-shadow-rgb,56,36,31),.055)}
 .simulation-report-toolbar{padding-bottom:15px;border-bottom:1px solid var(--cl-border-E9D9CE,#E9D9CE)}
-.simulation-printable{box-shadow:0 8px 28px rgba(56,36,31,.065);line-height:1.58}
+.simulation-printable{box-shadow:0 8px 28px rgba(var(--palette-shadow-rgb,56,36,31),.065);line-height:1.58}
 .simulation-report-intro>div{min-width:0}
 .simulation-report-intro h2,.simulation-report-intro p{overflow-wrap:anywhere}
 .simulation-report-total strong{font-size:clamp(20px,3vw,28px);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}

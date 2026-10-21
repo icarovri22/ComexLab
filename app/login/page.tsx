@@ -126,7 +126,7 @@ export default function Login(){
               {message&&<div className="auth-notice" role="alert">{message}</div>}
               <button className="auth-action" type="submit" disabled={loading||!me?.ready}>{mode==='register'?<UserPlus size={18}/>:<UserRound size={18}/>} {loading?'Aguarde...':mode==='login'?'Entrar na plataforma':'Criar conta'} <ArrowRight size={17}/></button>
             </form>
-            {mode==='login'&&<Link href="/recuperar" style={{display:'block',textAlign:'center',marginTop:15,fontSize:13,color:'#A34F37'}}>Esqueci minha senha</Link>}
+            {mode==='login'&&<Link href="/recuperar" style={{display:'block',textAlign:'center',marginTop:15,fontSize:13,color:'var(--primary)'}}>Esqueci minha senha</Link>}
             <p className="auth-secure"><LockKeyhole size={13}/> Senhas protegidas. Nenhuma confirmação por e-mail será enviada.</p>
           </>}
         </div>
