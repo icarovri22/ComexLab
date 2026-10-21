@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Globo ComexHub">
+<defs><linearGradient id="copper" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#67E8F9"/><stop offset="0.52" stop-color="#0891B2"/><stop offset="1" stop-color="#155E75"/></linearGradient></defs>
+<g fill="none" stroke="url(#copper)" stroke-linecap="round" stroke-linejoin="round">
+<circle cx="256" cy="256" r="201" stroke-width="25"/>
+<path d="M55 256 H457 M256 55 V457" stroke-width="24"/>
+<path d="M86 147 C156 213 356 213 426 147 M86 365 C156 299 356 299 426 365" stroke-width="23"/>
+<path d="M256 55 C154 121 154 391 256 457 M256 55 C358 121 358 391 256 457" stroke-width="23"/>
+</g></svg>
