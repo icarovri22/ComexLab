@@ -1,0 +1,17 @@
+'use client';
+import {useEffect,useState} from 'react';
+import {Check,Palette as PaletteIcon} from 'lucide-react';
+import ThemePicker from '../../components/ThemePicker';
+import {useAppearance} from '../../components/AppearanceProvider';
+import {palettes,Palette} from '../../lib/appearance';
+import './settings.css';
+export default function Settings(){
+ const {palette,ready,save}=useAppearance();
+ const [choice,setChoice]=useState<Palette>('original');
+ const [message,setMessage]=useState('');
+ useEffect(()=>{setChoice(palette)},[palette]);
+ const selected=palettes.find(p=>p.id===choice)!;
+ const option=(p:typeof palettes[number])=><button key={p.id} type="button" className={`appearance-option ${choice===p.id?'selected':''}`} aria-pressed={choice===p.id} onClick={()=>{setChoice(p.id);setMessage('')}}><span className="appearance-swatches" aria-hidden="true">{p.colors.map(color=><span key={color} style={{background:color}}/>)}</span><span className="appearance-option-label">{p.name}{choice===p.id&&<Check size={17} aria-hidden="true"/>}</span></button>;
+ const commit=(value:Palette)=>{if(save(value)){setChoice(value);setMessage('Preferência salva para sua conta neste navegador.')}else setMessage('Não foi possível salvar. Confira o acesso à conta e permita o armazenamento do navegador.')};
+ return <div className="appearance-page"><span className="eyebrow">SUA CONTA · CONFIGURAÇÕES</span><h1>Do seu jeito.</h1><p className="page-lead">Personalize seu espaço, mantendo a identidade do ComexHub.</p><div className="appearance-heading"><PaletteIcon size={18} aria-hidden="true"/><h2>Aparência</h2></div><div className="appearance-layout"><section aria-label="Preferências de aparência"><h3>Cores do app</h3><p className="help">A aparência original continua sendo o padrão.</p>{option(palettes[0])}<details className="minimal-disclosure appearance-advanced" open><summary>Configurações avançadas · outras paletas</summary><div className="appearance-options">{palettes.slice(1).map(option)}</div></details><div className="appearance-theme"><div><h3>Tema da interface</h3><p className="help">Claro, escuro ou conforme o sistema.</p></div><ThemePicker/></div><p className="help">A paleta é salva por conta neste navegador. O tema claro/escuro é aplicado imediatamente neste dispositivo. A logo mantém suas cores originais.</p></section><section aria-label="Amostra da paleta"><h3>Prévia da sua escolha</h3><div className="appearance-sample" style={{'--sample-accent':selected.colors[0],'--sample-soft':selected.colors[2]} as React.CSSProperties}><div className="appearance-sample-head">Simulador <span>Importação</span></div><div className="appearance-sample-body"><span className="appearance-sample-step">Etapa 3 de 6 · Custos</span><p className="help">Total estimado da operação</p><strong className="appearance-total">R$ 24.850,00</strong><div className="appearance-sample-row"><span>Incoterm</span><span>FOB · Marítimo</span></div><span className="appearance-sample-button">Continuar simulação →</span></div></div><p className="help">Valores ilustrativos. As cores do app mudam ao salvar.</p></section></div><div className="appearance-actions"><button className="btn secondary" type="button" disabled={!ready} onClick={()=>commit('original')}>Restaurar padrão original</button><button className="btn" type="button" disabled={!ready} onClick={()=>commit(choice)}>Salvar preferências</button></div><p role="status" aria-live="polite" className="help">{message||(!ready?'Carregando preferências da conta…':'')}</p></div>;
+}
