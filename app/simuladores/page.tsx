@@ -524,7 +524,7 @@ export default function Simuladores(){
     </section>;
   }
 
-  return <div className="simulator-page">
+  return <><div className="simulator-page">
     <div className="flex-head page-heading"><div><span className="eyebrow">FERRAMENTAS · SIMULADORES</span><h1>Simule com clareza.</h1>
       <p className="page-lead">Uma decisão por etapa. Seu painel acompanha os custos da operação.</p></div>
       <a className="sim-history-link" href="#simulation-history" onClick={()=>{document.getElementById('simulation-history')?.setAttribute('open','')}}>Histórico de simulações</a>
@@ -580,6 +580,7 @@ export default function Simuladores(){
     </div>
     {storageNotice&&<p className="help" role="status" aria-live="polite">{storageNotice}</p>}
     <details className="minimal-disclosure simulation-history-disclosure" id="simulation-history"><summary>Histórico de simulações ({history.length})</summary><SimulationHistory reports={history} enabled={Boolean(storageOwner)} onDelete={deleteSimulation}/></details>
+  </div>
     {step===steps.length-1&&report&&<SimulationReportView report={report.data} stale={report.signature!==currentSignature} onRegenerate={generateReport}/>}
-  </div>;
+  </>;
 }
