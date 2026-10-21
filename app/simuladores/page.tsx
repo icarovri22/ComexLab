@@ -440,10 +440,10 @@ export default function Simuladores(){
     {id:'result',short:'Resultado',title:'Resultado final e relatório'},
   ] as const;
   const currentStep=steps[step];
-  const progress=((step+1)/steps.length)*100;
 
   function goToStep(index:number){
     setStep(Math.min(Math.max(index,0),steps.length-1));
+    requestAnimationFrame(()=>{const section=document.getElementById('sim-step-content');section?.focus({preventScroll:true});document.getElementById('simulator-wizard-top')?.scrollIntoView({block:'start',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'})});
   }
 
   function nextStep(){
@@ -457,7 +457,7 @@ export default function Simuladores(){
   function renderStep(){
     if(currentStep.id==='route')return <section className="panel wizard-panel"><span className="eyebrow">ETAPA 01</span><h2>Origem, destino e produto</h2>
       <p className="page-lead">Defina a rota da operação, a mercadoria e os valores básicos da venda antes de seguir para as demais configurações.</p>
-      <p className="help sim-units-note"><strong>Unidades:</strong> quantidade de produtos. <strong>US$:</strong> dinheiro em dólares. <strong>R$/US$:</strong> cotação do dólar em reais. Digite somente números.</p>
+      <details className="minimal-disclosure"><summary>Como preencher quantidades e valores</summary><p className="help sim-units-note"><strong>Unidades:</strong> quantidade de produtos. <strong>US$:</strong> dinheiro em dólares. <strong>R$/US$:</strong> cotação do dólar em reais. Digite somente números.</p></details>
       <div className="market-pair">
         <CountryPicker id="origem" label="País ou território de origem" value={originCode} onChange={changeOrigin}/>
         <CountryPicker id="destino" label="País ou território de destino" value={destinationCode} onChange={changeDestination}/>
@@ -479,8 +479,8 @@ export default function Simuladores(){
       <div className="grid-2"><label className="field"><span className="label">Modal principal</span><select className="select" value={modal} onChange={e=>setModal(e.target.value)}>{['Marítimo','Aéreo','Rodoviário','Ferroviário','Multimodal'].map(x=><option key={x}>{x}</option>)}</select></label>
         <label className="field"><span className="label">Incoterm® 2020</span><select className="select" value={term} onChange={e=>setTerm(e.target.value)}>{INCOTERMS.map(x=><option key={x.code} value={x.code}>{x.code} — {x.name.split(' — ')[1]}</option>)}</select></label></div>
       <div className="flex-head"><span className="mini-tag">{INCOTERMS.length} regras</span><span className="mini-tag">{incoterm.modes==='sea'?'Apenas transporte por água':'Todos os modais'}</span></div>
-      <div className="info"><strong>{incoterm.name}</strong><p style={{margin:'7px 0'}}>{incoterm.description}</p><strong>Transferência de risco:</strong> {incoterm.risk}
-        <p className="small-top" style={{marginBottom:0}}><strong>Despacho de exportação:</strong> {incoterm.exportClearance==='seller'?'vendedor':'comprador'} · <strong>Despacho de importação:</strong> {incoterm.importClearance==='seller'?'vendedor':'comprador'}</p></div>
+      <details className="minimal-disclosure"><summary>Custos, riscos e responsabilidades de {term}</summary><div className="info"><strong>{incoterm.name}</strong><p style={{margin:'7px 0'}}>{incoterm.description}</p><strong>Transferência de risco:</strong> {incoterm.risk}
+        <p className="small-top" style={{marginBottom:0}}><strong>Despacho de exportação:</strong> {incoterm.exportClearance==='seller'?'vendedor':'comprador'} · <strong>Despacho de importação:</strong> {incoterm.importClearance==='seller'?'vendedor':'comprador'}</p></div></details>
       {warnings.map((message,i)=><div key={i} className="alert" role="status"><ShieldAlert size={15} style={{verticalAlign:'middle',marginRight:6}}/>{message}</div>)}
       <p className="help">A responsabilidade por custos e riscos depende do Incoterm, do ponto nomeado e do contrato. O simulador não substitui essas condições.</p>
     </section>;
@@ -488,7 +488,7 @@ export default function Simuladores(){
     if(currentStep.id==='costs')return <section className="panel wizard-panel"><span className="eyebrow">ETAPA 03</span><h2>Custos logísticos estimados (USD)</h2>
       <p className="page-lead">Informe os custos da cadeia logística para montar a base CIF e estimar a distribuição de despesas entre vendedor e comprador.</p>
       <p className="help sim-units-note"><strong>Valores monetários:</strong> todos os campos desta etapa são em <strong>US$ (dólares)</strong>, não em porcentagem. Digite apenas o número.</p>
-      <div className="grid-2"><Num name="Despacho e entrega na origem" value={origin} set={setOrigin}/><Num name="Carregamento a bordo / movimentação" value={loading} set={setLoading}/><Num name="Frete internacional" value={freight} set={setFreight}/><Num name="Seguro internacional (se contratado)" value={insurance} set={setInsurance}/><Num name="Transporte até o local nomeado" value={lastMile} set={setLastMile}/><Num name="Descarga no destino" value={unloading} set={setUnloading}/><Num name="Taxas locais e administrativas" value={fees} set={setFees}/></div>
+      <div className="grid-2"><Num name="Frete internacional" value={freight} set={setFreight}/><Num name="Seguro internacional (se contratado)" value={insurance} set={setInsurance}/></div><details className="minimal-disclosure" open={[origin,loading,lastMile,unloading,fees].some(value=>numberFrom(value)!==0)}><summary>Outras despesas da operação</summary><div className="grid-2"><Num name="Despacho e entrega na origem" value={origin} set={setOrigin}/><Num name="Carregamento a bordo / movimentação" value={loading} set={setLoading}/><Num name="Transporte até o local nomeado" value={lastMile} set={setLastMile}/><Num name="Descarga no destino" value={unloading} set={setUnloading}/><Num name="Taxas locais e administrativas" value={fees} set={setFees}/></div></details>
       <p className="help">Categorias de custo ilustrativas, sem incluir todos os encargos e regimes de cada país. O preço unitário informado deve excluir despesas listadas separadamente para evitar dupla contagem.</p>
     </section>;
 
@@ -498,10 +498,10 @@ export default function Simuladores(){
       {brazilTax?<div className="grid-2"><Num name="II — Imposto de Importação (%)" value={ii} set={setIi} kind="percent"/><Num name="IPI (%)" value={ipi} set={setIpi} kind="percent"/><Num name="PIS-Importação (%)" value={pis} set={setPis} kind="percent"/><Num name="Cofins-Importação (%)" value={cofins} set={setCofins} kind="percent"/><Num name="ICMS (%)" value={icms} set={setIcms} kind="percent"/></div>
         :<div className="grid-2"><Num name="Tarifa aduaneira estimada no destino (%)" value={destDuty} set={setDestDuty} kind="percent"/><Num name="Imposto indireto no destino — IVA/VAT/GST (%)" value={vat} set={setVat} kind="percent"/></div>}
       {euInternal&&<div className="alert"><strong>Comércio intracomunitário da UE:</strong> verifique circulação livre de bens, IVA sobre operações intracomunitárias e requisitos específicos. O cálculo extracomunitário simplificado abaixo não deve ser utilizado automaticamente nessa rota.</div>}
-      <div className="info"><Info size={17} style={{verticalAlign:'middle',marginRight:7}}/>{brazilTax?'Modelo ilustrativo do Brasil: II sobre CIF estimado; IPI sobre CIF+II; PIS/Cofins sobre CIF; ICMS por dentro segundo as rubricas informadas. Bases efetivas dependem da legislação.':'Modelo genérico ilustrativo: tarifa sobre CIF estimado e IVA/VAT/GST sobre CIF mais tarifa. Cada país possui bases, exceções e cobranças próprias, não cobertas integralmente.'}</div>
+      <details className="minimal-disclosure"><summary>Fontes e critérios de cálculo</summary><div className="info"><Info size={17} style={{verticalAlign:'middle',marginRight:7}}/>{brazilTax?'Modelo ilustrativo do Brasil: II sobre CIF estimado; IPI sobre CIF+II; PIS/Cofins sobre CIF; ICMS por dentro segundo as rubricas informadas. Bases efetivas dependem da legislação.':'Modelo genérico ilustrativo: tarifa sobre CIF estimado e IVA/VAT/GST sobre CIF mais tarifa. Cada país possui bases, exceções e cobranças próprias, não cobertas integralmente.'}</div>
       <div className="flex-head"><b style={{fontSize:13}}>Fontes referentes ao destino:</b></div>
       {countryLinks.map(x=><p key={x.name} style={{margin:'8px 0'}}><a href={x.url} target="_blank" rel="noopener noreferrer" className="reference-link">{x.name} <ExternalLink size={14}/></a></p>)}
-      <p className="help">Confirme a classificação tarifária local, regras de origem, acordos preferenciais, medidas antidumping, cotas, licenças, tributos seletivos e sanções. Não há alíquota universal por país.</p>
+      <p className="help">Confirme a classificação tarifária local, regras de origem, acordos preferenciais, medidas antidumping, cotas, licenças, tributos seletivos e sanções. Não há alíquota universal por país.</p></details>
     </section>;
 
     if(currentStep.id==='checklist')return <section className="panel wizard-panel"><span className="eyebrow">ETAPA 05</span><h2>Checklist internacional</h2>
@@ -524,10 +524,10 @@ export default function Simuladores(){
     </section>;
   }
 
-  return <>
-    <div className="flex-head"><div><span className="eyebrow">LABORATÓRIO DE OPERAÇÕES INTERNACIONAIS</span><h1>Simuladores de Operações</h1>
-      <p className="page-lead">Agora o simulador funciona em formato guiado: você avança uma etapa por vez, sem precisar preencher tudo de uma só vez.</p></div>
-      <span className="mini-tag"><Globe2 size={15}/>{MARKETS.length} países e territórios</span>
+  return <div className="simulator-page">
+    <div className="flex-head page-heading"><div><span className="eyebrow">FERRAMENTAS · SIMULADORES</span><h1>Simule com clareza.</h1>
+      <p className="page-lead">Uma decisão por etapa. Seu painel acompanha os custos da operação.</p></div>
+      <a className="sim-history-link" href="#simulation-history" onClick={()=>{document.getElementById('simulation-history')?.setAttribute('open','')}}>Histórico de simulações</a>
     </div>
     <div className="segmented" role="tablist" aria-label="Perspectiva da operação">
       <button role="tab" aria-selected={op==='import'} className={op==='import'?'selected':''} onClick={()=>changeOperation('import')}>Visão de importação</button>
@@ -535,38 +535,25 @@ export default function Simuladores(){
     </div>
     <p className="help operation-hint">{op==='import'?'Perspectiva de quem compra e recebe a mercadoria no país de destino.':'Perspectiva de quem vende e despacha a mercadoria no país de origem.'} Você pode escolher qualquer par de países; alterar a perspectiva não muda a rota selecionada.</p>
 
-    <section className="wizard-header" id="simulator-wizard-top" aria-label="Etapas da simulação">
-      <div className="flex-head">
-        <div>
-          <span className="eyebrow">PREENCHIMENTO GUIADO</span>
-          <h2>Preencha uma etapa por vez</h2>
-          <p className="page-lead">Clique nas etapas para revisar o que quiser ou use os botões de navegação para seguir em ordem.</p>
-        </div>
-        <span className="mini-tag">Etapa {step+1} de {steps.length}</span>
-      </div>
-      <div className="wizard-progress" aria-hidden="true"><span style={{width:`${progress}%`}}/></div>
-      <div className="wizard-steps" role="tablist" aria-label="Etapas do simulador">
-        {steps.map((item,index)=><button key={item.id} type="button" role="tab" aria-selected={index===step} className={`wizard-step ${index===step?'current':''} ${index<step?'done':''}`} onClick={()=>goToStep(index)}>
-          <span className="wizard-step-index">{String(index+1).padStart(2,'0')}</span>
-          <strong>{item.short}</strong>
-          <small>{item.title}</small>
-        </button>)}
-      </div>
-    </section>
-
-    <div className="grid-2 sim-layout" style={{gridTemplateColumns:'minmax(0,1.15fr) minmax(290px,.85fr)',alignItems:'start',marginTop:19}}>
-      <div>
-        {renderStep()}
+    <div className="grid-2 sim-layout">
+      <div className="sim-form-column">
+        <section className="wizard-header" id="simulator-wizard-top" aria-label="Etapas da simulação">
+          <div className="wizard-progress-label"><span>Etapa {step+1} de {steps.length} · {currentStep.short}</span><span>{step<steps.length-1?`A seguir: ${steps[step+1].short}`:'Revisão e relatório'}</span></div>
+          <div className="wizard-steps" role="group" aria-label="Escolher etapa da simulação">
+            {steps.map((item,index)=><button key={item.id} type="button" aria-current={index===step?'step':undefined} className={`wizard-step ${index===step?'current':''} ${index<step?'done':''}`} onClick={()=>goToStep(index)}><span className="wizard-step-index">{index+1}</span><strong>{item.short}</strong></button>)}
+          </div>
+        </section>
+        <div id="sim-step-content" tabIndex={-1}>{renderStep()}</div>
         <div className="wizard-nav">
           <button type="button" className="btn secondary" onClick={previousStep} disabled={step===0}>Etapa anterior</button>
-          <div className="wizard-nav-copy"><strong>{currentStep.title}</strong><span>Siga no seu ritmo. Você pode voltar e revisar qualquer etapa antes de gerar o relatório.</span></div>
+          <span className="wizard-nav-copy">{step+1} / {steps.length}</span>
           {step<steps.length-1?<button type="button" className="btn" onClick={nextStep}>Próxima etapa</button>:<button type="button" className="btn" onClick={generateReport}><FileText size={18}/>{report?'Atualizar relatório':'Gerar relatório'}</button>}
         </div>
       </div>
-      <aside><div className="panel sticky"><span className="eyebrow">PAINEL DA SIMULAÇÃO</span><h2 className="trade-route">{originMarket?.name??originCode} <ArrowLeftRight size={20}/> {destinationMarket?.name??destinationCode}</h2>
+      <aside className="sim-summary"><div className="panel sticky"><span className="eyebrow">PAINEL DA SIMULAÇÃO</span><h2 className="trade-route">{originMarket?.name??originCode} <ArrowLeftRight size={20}/> {destinationMarket?.name??destinationCode}</h2>
         <div className="flex-head"><span className="mini-tag">{modal==='Marítimo'?<Ship size={14}/>:modal==='Aéreo'?<Plane size={14}/>:<Truck size={14}/>} {modal}</span><span className="mini-tag">{term}</span></div>
         <p className="help">{op==='import'?'Visão do importador:':'Visão do exportador:'} simulação em USD, sem cálculo de taxas oficiais.</p>
-        <p className="help sim-units-legend">Valores com <strong>US$</strong> são montantes em dinheiro; alíquotas são informadas em <strong>%</strong> na etapa Tributos.</p>
+
         <div className="subline"><span>Mercadoria sem logística</span><strong>{formatUsd(prices.goods)}</strong></div>
         <div className="subline"><span>Frete + seguro</span><strong>{formatUsd(prices.freight+prices.insurance)}</strong></div>
         <div className="subline"><span>Base CIF aproximada</span><strong>{formatUsd(customsBase)}</strong></div>
@@ -574,10 +561,10 @@ export default function Simuladores(){
         <div className="subline"><span>Tributos estimados no destino</span><strong>{tax===null?'Pendente':formatUsd(tax)}</strong></div>
         <div className="subline total"><span>Total ilustrativo da cadeia</span><strong>{total===null?'Pendente':formatUsd(total)}</strong></div>
         {showBrl&&total!==null&&<p className="help">Conversão didática: {formatBrl(total*numberFrom(fx))}</p>}
-        <h3 style={{marginTop:22}}>Distribuição de custos</h3>
+        <details className="minimal-disclosure"><summary>Distribuição por Incoterm</summary>
         <div className="subline"><span>Vendedor · despesas da cadeia</span><strong>{sellerCost===null?'Pendente':formatUsd(sellerCost)}</strong></div>
         <div className="subline"><span>Comprador · despesas da cadeia</span><strong>{buyerCost===null?'Pendente':formatUsd(buyerCost)}</strong></div>
-        <p className="help">Não inclui o preço do produto nem margem na divisão por Incoterm. Taxas locais adicionais foram atribuídas ao comprador apenas como hipótese.</p>
+        <p className="help">Não inclui o preço do produto nem margem na divisão por Incoterm. Taxas locais adicionais foram atribuídas ao comprador apenas como hipótese.</p></details>
         <div className="wizard-side-status">
           <div className="mini-tag"><CheckCheck size={14}/>{checked.length}/{checklist.length} itens conferidos</div>
           <div className="mini-tag"><FileText size={14}/>{taxCompleted?'Tributos informados':'Tributos pendentes'}</div>
@@ -585,14 +572,14 @@ export default function Simuladores(){
         {!international&&<div className="alert">A rota selecionada não é internacional. Escolha países diferentes.</div>}
         {!taxCompleted&&international&&<div className="alert">Complete as alíquotas do país importador para calcular a tributação didática.</div>}
         {!compatible&&<div className="alert">Revise o modal ou o Incoterm selecionado.</div>}
-        <h3 style={{marginTop:23}}>Referências</h3>
+        <details className="minimal-disclosure"><summary>Referências da simulação</summary>
         <a className="reference-link" href="https://iccwbo.org/business-solutions/incoterms-rules/incoterms-2020/" target="_blank" rel="noopener noreferrer">ICC — Incoterms® 2020 <ExternalLink size={14}/></a>
         {showBrl&&<a className="reference-link" href="https://www.gov.br/siscomex/pt-br" target="_blank" rel="noopener noreferrer">Portal Siscomex <ExternalLink size={14}/></a>}
-        <div className="info"><BookOpen size={17} style={{verticalAlign:'middle',marginRight:6}}/>Simulação educacional: o uso de dados corretos de classificação, tributação, origem e restrições de cada país é responsabilidade de quem realiza a operação.</div>
+        <div className="info"><BookOpen size={17} style={{verticalAlign:'middle',marginRight:6}}/>Simulação educacional: o uso de dados corretos de classificação, tributação, origem e restrições de cada país é responsabilidade de quem realiza a operação.</div></details>
       </div></aside>
     </div>
     {storageNotice&&<p className="help" role="status" aria-live="polite">{storageNotice}</p>}
-    <SimulationHistory reports={history} enabled={Boolean(storageOwner)} onDelete={deleteSimulation}/>
+    <details className="minimal-disclosure simulation-history-disclosure" id="simulation-history"><summary>Histórico de simulações ({history.length})</summary><SimulationHistory reports={history} enabled={Boolean(storageOwner)} onDelete={deleteSimulation}/></details>
     {step===steps.length-1&&report&&<SimulationReportView report={report.data} stale={report.signature!==currentSignature} onRegenerate={generateReport}/>}
-  </>;
+  </div>;
 }
