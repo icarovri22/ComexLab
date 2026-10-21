@@ -5,6 +5,8 @@ import {isNewsCronRequest} from './lib/news-cron';
 export async function middleware(req:NextRequest){
  if(process.env.AUTH_REQUIRED!=='true')return NextResponse.next();
  const path=req.nextUrl.pathname;
+ // Public brand artwork must remain visible on sign-in and recovery pages.
+ if(/^\/comexhub-globe(?:-(?:blue|green|violet|petrol))?\.svg$/.test(path))return NextResponse.next();
  if(isNewsCronRequest(req.method,path))return NextResponse.next();
  if(isPublicAuthPage(path)||path.startsWith('/api/email-recovery')||path.startsWith('/api/auth')||path.startsWith('/api/recovery'))return NextResponse.next();
  const jwt=req.cookies.get('comexlab_session')?.value;
