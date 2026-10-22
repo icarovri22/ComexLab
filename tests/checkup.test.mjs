@@ -14,13 +14,15 @@ test('exportações e importações não são confundidas com portos',()=>{asser
 test('API recusa relatório incompleto e vincula a exclusão ao dono da sessão',async()=>{
  const {readFileSync}=await import('node:fs');const {createRequire}=await import('node:module');const require=createRequire(import.meta.url);const ts=require('typescript');
  const source=ts.transpileModule(readFileSync(new URL('../app/api/simulations/route.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
- const calls=[];const query=async(strings,...values)=>{calls.push({sql:strings.join('?'),values});return [{id:'42'}]};
+ let updateExists=true;const calls=[];const query=async(strings,...values)=>{calls.push({sql:strings.join('?'),values});return strings.join('?').startsWith('UPDATE')&&!updateExists?[]:[{id:'42'}]};
  const mocks={'../../../lib/account-session':{selectedSession},'next/server':{NextResponse:{json:(body,options={})=>({status:options.status||200,body})}},'../../../lib/admin-auth':{verifiedAccount:async()=>({id:'test-owner'}),queryDB:()=>query,noStore:{}},'../../../lib/security':{cookieName:'session'},'../../../lib/simulation-storage':{isSimulationReport}};
  const module={exports:{}};new Function('require','module','exports',source)(name=>mocks[name],module,module.exports);
  const req=(payload={})=>({headers:new Headers({origin:'https://unit.invalid'}),nextUrl:{host:'unit.invalid',searchParams:new URLSearchParams({id:'42'})},cookies:{get:()=>({value:'test-session'})},text:async()=>JSON.stringify(payload)});
  assert.equal((await module.exports.POST(req({generatedAt:'today',sections:[]}))).status,400);assert.equal(calls.length,0);
  assert.equal((await module.exports.POST(req(report()))).status,201);assert.equal(calls[0].values[0],'test-owner');
  assert.equal((await module.exports.DELETE(req())).status,200);assert.match(calls[1].sql,/id=\? AND user_id=\?/);assert.deepEqual(calls[1].values,['42','test-owner']);
+ assert.equal((await module.exports.PATCH(req(report()))).status,200);assert.match(calls[2].sql,/^UPDATE comexhub_simulation_history/);assert.match(calls[2].sql,/id=\? AND user_id=\?/);assert.deepEqual(calls[2].values.slice(1),['42','test-owner']);
+ updateExists=false;assert.equal((await module.exports.PATCH(req(report()))).status,404);assert.equal((await module.exports.PATCH(req({bad:true}))).status,400);
 });
 
 test('gerador de PDF atualizado produz um documento A4 válido',async()=>{

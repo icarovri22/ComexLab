@@ -155,6 +155,9 @@ export default function Simuladores(){
   const [icms,setIcms]=useState('');
   const [checked,setChecked]=useState<string[]>([]);
   const [report,setReport]=useState<{data:SimulationReport;signature:string}|null>(null);
+  const activeReport=useRef<SimulationReport|null>(null);
+  const savingReport=useRef(false);
+  const [reportSaving,setReportSaving]=useState(false);
   const [step,setStep]=useState(0);
   const wasWizardInitialized=useRef(false);
   const [storageOwner,setStorageOwner]=useState<string|null>(null);
@@ -220,19 +223,25 @@ export default function Simuladores(){
   },[storageOwner,storageReady,op,originCode,destinationCode,product,ncm,modal,combinedModes,loadingPort,dischargePort,quantityUnit,quantityOther,term,qty,unit,fx,origin,loading,freight,insurance,lastMile,unloading,fees,destDuty,vat,ii,ipi,pis,cofins,icms,checked,step]);
   async function saveSimulation(data:SimulationReport){
     if(!storageOwner)return;
-    setStorageNotice('Salvando relatório…');
-    let saved:SimulationReport=data;
+    savingReport.current=true;setReportSaving(true);
+    const existing=activeReport.current;
+    setStorageNotice(existing?'Atualizando relatório…':'Salvando relatório…');
+    let saved:SimulationReport={...data,...(existing?.serverId?{serverId:existing.serverId}:{})};
     try{
-      const response=await accountFetch('/api/simulations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+      const update=Boolean(existing?.serverId);
+      const response=await accountFetch('/api/simulations'+(update?'?id='+encodeURIComponent(existing!.serverId!):''),{method:update?'PATCH':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
       if(!response.ok)throw Error('Não foi possível salvar no servidor.');
       const result=await response.json();if(typeof result.id!=='string')throw Error('Resposta inválida.');
-      saved={...data,serverId:result.id};setStorageNotice('Relatório salvo na sua conta.');
+      saved={...data,serverId:result.id};setStorageNotice(existing?'Relatório atualizado na sua conta.':'Relatório salvo na sua conta.');
     }catch{setStorageNotice('Relatório salvo somente neste navegador. A gravação no servidor falhou.');}
+    activeReport.current=saved;
     setHistory(previous=>{
-      const next=[saved,...previous].slice(0,30);
+      const found=existing?previous.findIndex(item=>item===existing||Boolean(existing.serverId&&item.serverId===existing.serverId)):-1;
+      const next=found>=0?previous.map((item,index)=>index===found?saved:item):[saved,...previous].slice(0,30);
       try{localStorage.setItem(`comexhub:sim:history:${storageOwner}`,JSON.stringify(next));}catch{}
       return next;
     });
+    savingReport.current=false;setReportSaving(false);
   }
   async function deleteSimulation(index:number){
     if(!storageOwner)return;
@@ -386,6 +395,7 @@ export default function Simuladores(){
   ];
 
   function generateReport(){
+    if(savingReport.current)return;
     const unitCost=(label:string,amount:number):{label:string;value:string}=>({label,value:formatUsd(amount)});
     const moneyOrPending=(value:number|null)=>value===null?'Pendente':formatUsd(value);
     const taxValues:{label:string;value:string}[]=brazilTax?[
@@ -585,7 +595,7 @@ export default function Simuladores(){
         <div className="wizard-nav">
           <button type="button" className="btn secondary" onClick={previousStep} disabled={step===0}>Etapa anterior</button>
           <span className="wizard-nav-copy">{step+1} / {steps.length}</span>
-          {step<steps.length-1?<button type="button" className="btn" onClick={nextStep}>Próxima etapa</button>:<button type="button" className="btn" onClick={generateReport}><FileText size={18}/>{report?'Atualizar relatório':'Gerar relatório'}</button>}
+          {step<steps.length-1?<button type="button" className="btn" onClick={nextStep}>Próxima etapa</button>:<button type="button" className="btn" onClick={generateReport} disabled={reportSaving}><FileText size={18}/>{reportSaving?'Salvando…':report?'Salvar alterações no relatório':'Gerar relatório'}</button>}
         </div>
       </div>
       <aside className="sim-summary"><div className="panel sticky"><span className="eyebrow">PAINEL DA SIMULAÇÃO</span><h2 className="trade-route">{originMarket?.name??originCode} <ArrowLeftRight size={20}/> {destinationMarket?.name??destinationCode}</h2>
@@ -621,6 +631,6 @@ export default function Simuladores(){
     {storageNotice&&<p className="help" role="status" aria-live="polite">{storageNotice}</p>}
     <details className="minimal-disclosure simulation-history-disclosure" id="simulation-history"><summary>Histórico de simulações ({history.length})</summary><SimulationHistory reports={history} enabled={Boolean(storageOwner)} onDelete={deleteSimulation}/></details>
   </div>
-    {step===steps.length-1&&report&&<SimulationReportView report={report.data} stale={report.signature!==currentSignature} onRegenerate={generateReport}/>}
+    {step===steps.length-1&&report&&<SimulationReportView report={report.data} stale={report.signature!==currentSignature} onEdit={()=>goToStep(0)} saving={reportSaving}/>}
   </>;
 }

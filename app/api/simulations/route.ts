@@ -26,3 +26,11 @@ export async function DELETE(req:NextRequest){
  if(!trusted(req))return fail('Origem não autorizada.',403);const me=await user(req);if(!me)return fail('Sessão inválida.',401);const id=req.nextUrl.searchParams.get('id');if(!id||!/^\d+$/.test(id))return fail('Identificador inválido.',400);
  try{const sql=queryDB();await sql`DELETE FROM comexhub_simulation_history WHERE id=${id} AND user_id=${me.id}`;return NextResponse.json({ok:true},{headers:noStore})}catch{return fail('Falha ao excluir o relatório.',503)}
 }
+
+export async function PATCH(req:NextRequest){
+ if(!trusted(req))return fail('Origem não autorizada.',403);const me=await user(req);if(!me)return fail('Sessão inválida.',401);
+ const id=req.nextUrl.searchParams.get('id');if(!id||!/^\d+$/.test(id))return fail('Identificador inválido.',400);
+ let report:unknown;try{const body=await req.text();if(body.length>80000)return fail('Relatório muito extenso.',413);report=JSON.parse(body)}catch{return fail('Relatório inválido.',400)}
+ if(!isSimulationReport(report))return fail('Relatório inválido.',400);
+ try{const sql=queryDB();const result=await sql`UPDATE comexhub_simulation_history SET report=${JSON.stringify(report)}::jsonb WHERE id=${id} AND user_id=${me.id} RETURNING id::text`;if(!result.length)return fail('Relatório não encontrado.',404);return NextResponse.json({ok:true,id:result[0].id},{headers:noStore})}catch{return fail('Falha ao atualizar o relatório.',503)}
+}

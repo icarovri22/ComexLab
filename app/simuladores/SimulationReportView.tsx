@@ -4,7 +4,7 @@ import {Printer,Download,RefreshCcw,AlertTriangle,CheckCircle2} from 'lucide-rea
 import {useState} from 'react';
 import type {SimulationReport} from '../../lib/simulation-report';
 
-export default function SimulationReportView({report,stale,onRegenerate}:{report:SimulationReport;stale:boolean;onRegenerate:()=>void}){
+export default function SimulationReportView({report,stale,onEdit,saving=false,editLabel='Atualizar relatório'}:{report:SimulationReport;stale:boolean;onEdit:()=>void;saving?:boolean;editLabel?:string}){
  const [generatingPdf,setGeneratingPdf]=useState(false);
  const [pdfError,setPdfError]=useState('');
  async function downloadPdf(){
@@ -24,13 +24,13 @@ export default function SimulationReportView({report,stale,onRegenerate}:{report
   <div className="simulation-report-toolbar">
    <div><span className="eyebrow">RELATÓRIO GERADO</span><h2>Prévia do relatório</h2><p className="help">Confira os dados e escolha uma ação: imprimir ou baixar o PDF diretamente.</p></div>
    <div className="simulation-report-actions">
-    <button type="button" className="btn secondary" onClick={onRegenerate}><RefreshCcw size={17}/> Atualizar relatório</button>
+    <button type="button" className="btn secondary" onClick={onEdit} disabled={saving}><RefreshCcw size={17}/> {editLabel}</button>
     <button type="button" className="btn secondary" onClick={()=>window.print()} disabled={stale||generatingPdf} title={stale?'Atualize o relatório para refletir os novos dados':'Abrir a impressão do relatório'}><Printer size={17}/> Imprimir</button>
     <button type="button" className="btn" onClick={()=>void downloadPdf()} disabled={stale||generatingPdf} title={stale?'Atualize o relatório para refletir os novos dados':'Baixar o relatório em arquivo PDF'}><Download size={17}/> {generatingPdf?'Gerando PDF...':'Baixar PDF'}</button>
    </div>
   </div>
   {pdfError&&<div className="alert simulation-report-stale" role="alert">{pdfError}</div>}
-  {stale&&<div className="alert simulation-report-stale" role="status"><AlertTriangle size={18}/> A simulação foi modificada depois da geração. Selecione <strong>Atualizar relatório</strong> antes de imprimir ou baixar os valores atuais.</div>}
+  {stale&&<div className="alert simulation-report-stale" role="status"><AlertTriangle size={18}/> A simulação foi modificada depois da geração. Selecione <strong>Atualizar relatório</strong> para revisar os dados e, na etapa Resultado, salve as alterações antes de imprimir ou baixar.</div>}
   <article className="simulation-printable" id="simulation-printable">
    <header className="simulation-report-header"><div><span className="simulation-report-brand">Comex<span>Hub</span></span><p>Relatório educacional de comércio exterior</p></div><div className="simulation-report-header-right"><strong>RELATÓRIO DIDÁTICO</strong><span>{report.generatedAt} · horário de Fortaleza</span></div></header>
    <div className="simulation-report-intro"><div><span className="simulation-report-label">OPERAÇÃO</span><h2>{report.operation}</h2><p>{report.route}</p></div><div><span className="simulation-report-label">MERCADORIA</span><h2>{report.product||'Não informada'}</h2><p>{report.status}</p></div></div>
