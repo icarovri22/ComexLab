@@ -7,6 +7,10 @@ import {INCOTERMS,allocate,getIncoterm,isCompatible} from '../../lib/incoterms';
 import {calculateBrazilImport,calculateDestinationTax,formatBrl,formatUsd,numberFrom,hasRate} from '../../lib/calc';
 import SimulationReportView from './SimulationReportView';
 import SimulationHistory from './SimulationHistory';
+import PortPicker from '../../components/PortPicker';
+import {restorePort,formatPort,PORT_DATA_SOURCE,PORT_AUTHORITY_SOURCES,type Port} from '../../lib/ports';
+import {TRANSPORT_MODES,COMMERCIAL_UNITS,restoreModes,hasWaterLeg,transportLabel,commercialUnitLabel,connectPort,portConnectionNeeded} from '../../lib/transport';
+import './transport.css';
 import {chooseSimulationDraft,readStoredJson,mergeSimulationHistory} from '../../lib/simulation-storage';
 import {createSimulationReport,type SimulationReport,type ReportSection} from '../../lib/simulation-report';
 import {findCountries,flagForCountryCode,isCrossBorder,isIntraEU,normalizeContinent,tariffReferences,taxRegimeFor,type Country} from '../../lib/markets';
@@ -105,14 +109,14 @@ function CountryPicker({id,label,value,onChange}:{id:string;label:string;value:s
 }
 
 type NumericKind='currency'|'percent'|'quantity'|'exchange';
-function Num({name,value,set,desc,kind='currency'}:{name:string;value:string;set:(x:string)=>void;desc?:string;kind?:NumericKind}){
-  const unit=kind==='currency'?'US$':kind==='percent'?'%':kind==='quantity'?'un.':'R$/US$';
-  const unitDescription=kind==='currency'?'valor em dólares americanos':kind==='percent'?'alíquota em porcentagem':kind==='quantity'?'quantidade de unidades':'cotação em reais por dólar';
+function Num({name,value,set,desc,kind='currency',suffix}:{name:string;value:string;set:(x:string)=>void;desc?:string;kind?:NumericKind;suffix?:string}){
+  const unit=kind==='currency'?'US$':kind==='percent'?'%':kind==='quantity'?(suffix||'un.'):'R$/US$';
+  const unitDescription=kind==='currency'?'valor em dólares americanos':kind==='percent'?'alíquota em porcentagem':kind==='quantity'?`quantidade em ${suffix||'unidades'}`:'cotação em reais por dólar';
   return <label className="field">
     <span className="label">{name}</span>
     <span className={`sim-number-field ${kind==='currency'?'prefix':'suffix'} kind-${kind}`}>
       <span className="sim-number-unit" aria-hidden="true">{unit}</span>
-      <input className="input sim-number-input" inputMode={kind==='quantity'?'numeric':'decimal'} aria-label={`${name} — ${unitDescription}`} value={value} onChange={e=>set(e.target.value)}/>
+      <input className="input sim-number-input" inputMode="decimal" aria-label={`${name} — ${unitDescription}`} value={value} onChange={e=>set(e.target.value)}/>
     </span>
     {desc&&<small className="help">{desc}</small>}
   </label>;
@@ -125,6 +129,11 @@ export default function Simuladores(){
   const [product,setProduct]=useState('Camisetas de malha');
   const [ncm,setNcm]=useState('6109.90.00');
   const [modal,setModal]=useState('Marítimo');
+  const [combinedModes,setCombinedModes]=useState<string[]>(['Marítimo','Rodoviário']);
+  const [loadingPort,setLoadingPort]=useState<Port|null>(null);
+  const [dischargePort,setDischargePort]=useState<Port|null>(null);
+  const [quantityUnit,setQuantityUnit]=useState('un');
+  const [quantityOther,setQuantityOther]=useState('');
   const [term,setTerm]=useState('FCA');
   const [qty,setQty]=useState('500');
   const [unit,setUnit]=useState('12');
@@ -168,7 +177,11 @@ export default function Simuladores(){
           if(typeof saved.destinationCode==='string')setDestinationCode(saved.destinationCode);
           if(typeof saved.product==='string')setProduct(saved.product);
           if(typeof saved.ncm==='string')setNcm(saved.ncm);
-          if(typeof saved.modal==='string')setModal(saved.modal);
+          if(typeof saved.modal==='string'&&(TRANSPORT_MODES.some(m=>m===saved.modal)||saved.modal==='Multimodal'))setModal(saved.modal);
+          if(Array.isArray(saved.combinedModes))setCombinedModes(restoreModes(saved.combinedModes));
+          setLoadingPort(restorePort(saved.loadingPort));setDischargePort(restorePort(saved.dischargePort));
+          if(typeof saved.quantityUnit==='string'&&COMMERCIAL_UNITS.some(u=>u.code===saved.quantityUnit))setQuantityUnit(saved.quantityUnit);
+          if(typeof saved.quantityOther==='string')setQuantityOther(saved.quantityOther.slice(0,40));
           if(typeof saved.term==='string')setTerm(saved.term);
           if(typeof saved.qty==='string')setQty(saved.qty);
           if(typeof saved.unit==='string')setUnit(saved.unit);
@@ -201,9 +214,9 @@ export default function Simuladores(){
   },[]);
   useEffect(()=>{
     if(!storageOwner||!storageReady)return;
-    try{localStorage.setItem(`comexhub:sim:draft:${storageOwner}`,JSON.stringify({op,originCode,destinationCode,product,ncm,modal,term,qty,unit,fx,origin,loading,freight,insurance,lastMile,unloading,fees,destDuty,vat,ii,ipi,pis,cofins,icms,checked,step}));}catch{/* Storage may be disabled or full. */}
-    const timer=setTimeout(()=>{fetch('/api/simulations',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({op,originCode,destinationCode,product,ncm,modal,term,qty,unit,fx,origin,loading,freight,insurance,lastMile,unloading,fees,destDuty,vat,ii,ipi,pis,cofins,icms,checked,step})}).catch(()=>{})},900);return ()=>clearTimeout(timer);
-  },[storageOwner,storageReady,op,originCode,destinationCode,product,ncm,modal,term,qty,unit,fx,origin,loading,freight,insurance,lastMile,unloading,fees,destDuty,vat,ii,ipi,pis,cofins,icms,checked,step]);
+    try{localStorage.setItem(`comexhub:sim:draft:${storageOwner}`,JSON.stringify({op,originCode,destinationCode,product,ncm,modal,combinedModes,loadingPort,dischargePort,quantityUnit,quantityOther,term,qty,unit,fx,origin,loading,freight,insurance,lastMile,unloading,fees,destDuty,vat,ii,ipi,pis,cofins,icms,checked,step}));}catch{/* Storage may be disabled or full. */}
+    const timer=setTimeout(()=>{fetch('/api/simulations',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({op,originCode,destinationCode,product,ncm,modal,combinedModes,loadingPort,dischargePort,quantityUnit,quantityOther,term,qty,unit,fx,origin,loading,freight,insurance,lastMile,unloading,fees,destDuty,vat,ii,ipi,pis,cofins,icms,checked,step})}).catch(()=>{})},900);return ()=>clearTimeout(timer);
+  },[storageOwner,storageReady,op,originCode,destinationCode,product,ncm,modal,combinedModes,loadingPort,dischargePort,quantityUnit,quantityOther,term,qty,unit,fx,origin,loading,freight,insurance,lastMile,unloading,fees,destDuty,vat,ii,ipi,pis,cofins,icms,checked,step]);
   async function saveSimulation(data:SimulationReport){
     if(!storageOwner)return;
     setStorageNotice('Salvando relatório…');
@@ -238,8 +251,8 @@ export default function Simuladores(){
     if(!storageReady)return;
     const params=new URLSearchParams(window.location.search);
     const kind=params.get('tipo');
-    if(kind==='exportacao') {setOp('export');setOriginCode('BR');setDestinationCode('NL');}
-    if(kind==='importacao') {setOp('import');setOriginCode('CN');setDestinationCode('BR');}
+    if(kind==='exportacao') {setOp('export');setOriginCode('BR');setDestinationCode('NL');setLoadingPort(null);setDischargePort(null);}
+    if(kind==='importacao') {setOp('import');setOriginCode('CN');setDestinationCode('BR');setLoadingPort(null);setDischargePort(null);}
     const code=params.get('ncm');
     if(code&&/^\d{8}$/.test(code))setNcm(code.replace(/^(\d{4})(\d{2})(\d{2})$/,'$1.$2.$3'));
     const name=params.get('produto');
@@ -261,7 +274,14 @@ export default function Simuladores(){
   const euInternal=isIntraEU(originCode,destinationCode);
   const brazilTax=taxRegimeFor(destinationCode)==='brasil';
   const incoterm=getIncoterm(term);
-  const compatible=isCompatible(term,modal);
+  const seaLeg=hasWaterLeg(modal,combinedModes);
+  const modeLabel=transportLabel(modal,combinedModes);
+  const quantityLabel=commercialUnitLabel(quantityUnit,quantityOther);
+  const quantitySymbol=COMMERCIAL_UNITS.find(u=>u.code===quantityUnit)?.symbol||'un.';
+  const combinedReady=modal!=='Multimodal'||combinedModes.length>=2;
+  const transitNeedsConnection=seaLeg&&portConnectionNeeded(originCode,destinationCode,loadingPort?.country,dischargePort?.country);
+  const connected=!transitNeedsConnection||(modal==='Multimodal'&&combinedModes.some(m=>m==='Rodoviário'||m==='Ferroviário'||m==='Aéreo'||m==='Fluvial'));
+  const compatible=isCompatible(term,modal,combinedModes)&&combinedReady&&connected;
   const countryLinks=useMemo(()=>tariffReferences(originCode,destinationCode),[originCode,destinationCode]);
   const prices=useMemo(()=>({
     goods:numberFrom(qty)*numberFrom(unit),
@@ -287,7 +307,8 @@ export default function Simuladores(){
 
   const warnings=[
     !international?'Origem e destino devem ser países ou territórios diferentes para esta simulação de comércio exterior.':null,
-    !compatible?'O Incoterm selecionado é incompatível com este modal. FAS, FOB, CFR e CIF são exclusivos de transporte por água.':null,
+    !combinedReady?'Selecione pelo menos dois modais em Combinar modais.':!connected?'O porto está em outro país. Combine um transporte complementar ou revise a seleção.':!isCompatible(term,modal,combinedModes)?'O Incoterm selecionado é incompatível com este modal. FAS, FOB, CFR e CIF são exclusivos de transporte por água.':null,
+    quantityUnit==='other'&&!quantityOther.trim()?'Descreva a unidade comercial escolhida.':null,
     term==='EXW'?'Em EXW, o comprador teria de viabilizar o despacho de exportação no país de origem. Confira as regras locais.':null,
     term==='DDP'?'Em DDP, o vendedor precisa poder realizar a importação e pagar tributos no país de destino. Confirme exigências legais.':null,
     euInternal?'Entre países da UE, operações com mercadorias em livre circulação geralmente não seguem a importação aduaneira extracomunitária. Verifique IVA intracomunitário e regimes específicos; o modelo genérico abaixo pode não ser adequado.':null,
@@ -308,6 +329,7 @@ export default function Simuladores(){
   function changeOrigin(code:string){
     if(code!==originCode){
       setOriginCode(code);
+      setLoadingPort(null);
       clearDestinationRates();
     }
   }
@@ -315,6 +337,7 @@ export default function Simuladores(){
   function changeDestination(code:string){
     if(code!==destinationCode){
       setDestinationCode(code);
+      setDischargePort(null);
       clearDestinationRates();
     }
   }
@@ -322,13 +345,21 @@ export default function Simuladores(){
   function swapMarkets(){
     setOriginCode(destinationCode);
     setDestinationCode(originCode);
+    setLoadingPort(dischargePort);setDischargePort(loadingPort);
     clearDestinationRates();
   }
 
   function useRoute(from:string,to:string){
     setOriginCode(from);
     setDestinationCode(to);
+    setLoadingPort(null);setDischargePort(null);
     clearDestinationRates();
+  }
+
+  function choosePort(side:'loading'|'discharge',port:Port|null){
+    if(side==='loading')setLoadingPort(port);else setDischargePort(port);
+    const endpoint=side==='loading'?originCode:destinationCode;
+    if(port&&port.country!==endpoint){const next=connectPort(modal,combinedModes,endpoint,port.country);setModal(next.modal);setCombinedModes(next.modes);}
   }
 
   function changeOperation(next:Operation){
@@ -337,7 +368,7 @@ export default function Simuladores(){
   }
 
   const currentSignature=JSON.stringify([
-    op,originCode,destinationCode,product,ncm,modal,term,qty,unit,fx,
+    op,originCode,destinationCode,product,ncm,modal,combinedModes,loadingPort,dischargePort,quantityUnit,quantityOther,term,qty,unit,fx,
     origin,loading,freight,insurance,lastMile,unloading,fees,
     destDuty,vat,ii,ipi,pis,cofins,icms,...checked.slice().sort()
   ]);
@@ -402,9 +433,10 @@ export default function Simuladores(){
       product:product.trim(),
       summary:[
         {label:'Código NCM/HS informado',value:ncm.trim()||'Não informado'},
-        {label:'Quantidade',value:qty},
-        {label:'Preço unitário (USD)',value:formatUsd(numberFrom(unit))},
-        {label:'Modal principal',value:modal},
+        {label:'Quantidade comercial',value:`${qty} · ${quantityLabel}`} ,
+        {label:'Preço por unidade comercial (USD)',value:`${formatUsd(numberFrom(unit))} / ${quantityLabel}`} ,
+        {label:'Transporte',value:modeLabel},
+        ...(seaLeg?[{label:'Porto de embarque',value:loadingPort?formatPort(loadingPort):'Ainda não definido'},{label:'Porto de desembarque',value:dischargePort?formatPort(dischargePort):'Ainda não definido'}]:[]),
         {label:'Incoterm® 2020',value:incoterm.name},
         {label:'Valor da mercadoria (USD)',value:formatUsd(prices.goods)},
         {label:'Base CIF estimada (USD)',value:formatUsd(customsBase)},
@@ -423,6 +455,7 @@ export default function Simuladores(){
       sources:[
         {name:'ICC — Incoterms® 2020',url:'https://iccwbo.org/business-solutions/incoterms-rules/incoterms-2020/'},
         ...countryLinks.map(x=>({name:x.name,url:x.url})),
+        ...(seaLeg?[{name:'WPI — consulta de referência, catálogo não exaustivo',url:PORT_DATA_SOURCE},...PORT_AUTHORITY_SOURCES]:[]),
         ...(showBrl?[{name:'Portal Siscomex',url:'https://www.gov.br/siscomex/pt-br'}]:[]),
       ],
     });
@@ -457,7 +490,7 @@ export default function Simuladores(){
   function renderStep(){
     if(currentStep.id==='route')return <section className="panel wizard-panel"><span className="eyebrow">ETAPA 01</span><h2>Origem, destino e produto</h2>
       <p className="page-lead">Defina a rota da operação, a mercadoria e os valores básicos da venda antes de seguir para as demais configurações.</p>
-      <details className="minimal-disclosure"><summary>Como preencher quantidades e valores</summary><p className="help sim-units-note"><strong>Unidades:</strong> quantidade de produtos. <strong>US$:</strong> dinheiro em dólares. <strong>R$/US$:</strong> cotação do dólar em reais. Digite somente números.</p></details>
+      <details className="minimal-disclosure"><summary>Como preencher quantidades e valores</summary><p className="help sim-units-note"><strong>Quantidade:</strong> número na unidade comercial escolhida, como kg, pares ou caixas. <strong>US$:</strong> dinheiro em dólares. <strong>R$/US$:</strong> cotação do dólar em reais. Digite somente números.</p></details>
       <div className="market-pair">
         <CountryPicker id="origem" label="País ou território de origem" value={originCode} onChange={changeOrigin}/>
         <CountryPicker id="destino" label="País ou território de destino" value={destinationCode} onChange={changeDestination}/>
@@ -469,15 +502,19 @@ export default function Simuladores(){
       <details className="market-examples"><summary>Ver exemplos de rotas</summary><div className="route-actions"><button type="button" onClick={()=>useRoute('CN','US')}>China → EUA</button><button type="button" onClick={()=>useRoute('DE','FR')}>Alemanha → França</button><button type="button" onClick={()=>useRoute('JP','AU')}>Japão → Austrália</button></div></details>
       <div className="grid-2"><label className="field"><span className="label">Mercadoria</span><input className="input" value={product} onChange={e=>setProduct(e.target.value)}/></label>
         <label className="field"><span className="label">{showBrl?'NCM brasileiro / código HS para conferência':'Código HS / classificação local no destino'}</span><input className="input" value={ncm} onChange={e=>setNcm(e.target.value)}/></label></div>
-      <div className="grid-2"><Num name="Quantidade" value={qty} set={setQty} kind="quantity"/><Num name="Preço por unidade sem logística (USD)" value={unit} set={setUnit}/></div>
+      <div className="grid-2"><Num name="Quantidade comercial" value={qty} set={setQty} kind="quantity" suffix={quantitySymbol}/><label className="field"><span className="label">Unidade de medida</span><select className="select" value={quantityUnit} onChange={e=>setQuantityUnit(e.target.value)}>{COMMERCIAL_UNITS.map(u=><option key={u.code} value={u.code}>{u.label}</option>)}</select></label></div>
+      {quantityUnit==='other'&&<label className="field"><span className="label">Qual unidade?</span><input className="input" maxLength={40} value={quantityOther} onChange={e=>setQuantityOther(e.target.value)}/></label>}
+      <Num name={`Preço por ${quantityLabel.toLocaleLowerCase('pt-BR')} sem logística (USD)`} value={unit} set={setUnit} desc="Use o preço da unidade escolhida. Não há conversão automática entre caixa, unidade ou kg."/>
       {showBrl&&<Num name="Câmbio didático (reais por dólar)" value={fx} set={setFx} kind="exchange"/>} 
       <p className="help">Pesquise diretamente pelo nome ou sigla, com bandeiras para identificar os países e territórios. Os preços são simulados em USD, inclusive entre países fora do Brasil. O código HS é harmonizado até seis dígitos; o país importador pode exigir detalhamento próprio.</p>
     </section>;
 
     if(currentStep.id==='terms')return <section className="panel wizard-panel"><span className="eyebrow">ETAPA 02</span><h2>Modal e Incoterm® 2020</h2>
       <p className="page-lead">Escolha como a mercadoria será transportada e defina a regra Incoterm que distribui custos, riscos e responsabilidades.</p>
-      <div className="grid-2"><label className="field"><span className="label">Modal principal</span><select className="select" value={modal} onChange={e=>setModal(e.target.value)}>{['Marítimo','Aéreo','Rodoviário','Ferroviário','Multimodal'].map(x=><option key={x}>{x}</option>)}</select></label>
+      <div className="grid-2"><label className="field"><span className="label">Como a mercadoria vai viajar?</span><select className="select" value={modal} onChange={e=>setModal(e.target.value)}>{[...TRANSPORT_MODES,'Multimodal'].map(x=><option key={x} value={x}>{x==='Multimodal'?'Combinar modais':x}</option>)}</select></label>
         <label className="field"><span className="label">Incoterm® 2020</span><select className="select" value={term} onChange={e=>setTerm(e.target.value)}>{INCOTERMS.map(x=><option key={x.code} value={x.code}>{x.code} — {x.name.split(' — ')[1]}</option>)}</select></label></div>
+      {modal==='Multimodal'&&<div className="transport-combination" role="group" aria-label="Modais combinados">{TRANSPORT_MODES.map(mode=><label key={mode}><input type="checkbox" checked={combinedModes.includes(mode)} onChange={e=>setCombinedModes(previous=>e.target.checked?[...previous,mode]:previous.filter(m=>m!==mode))}/>{mode}</label>)}</div>}
+      {seaLeg&&<div className="sim-ports"><h3>Portos da operação</h3><div className="grid-2"><PortPicker id="loading-port" label="Porto de embarque" preferredCountry={originCode} value={loadingPort} onChange={port=>choosePort('loading',port)}/><PortPicker id="discharge-port" label="Porto de desembarque" preferredCountry={destinationCode} value={dischargePort} onChange={port=>choosePort('discharge',port)}/></div><p className="help">O porto pode ficar em outro país. O destino final e a tributação continuam sendo {destinationMarket?.name??destinationCode}. A busca usa um catálogo inicial, não exaustivo; a seleção não confirma linha direta ou disponibilidade de serviço.</p>{transitNeedsConnection&&<div className="transport-route-note">Porto em outro país: confira o transporte complementar na combinação acima. Você pode trocar o trecho rodoviário por outro modal adequado. Informe o custo até o porto nas despesas de origem e, após o desembarque, no transporte ao destino final.</div>}</div>}
       <div className="flex-head"><span className="mini-tag">{INCOTERMS.length} regras</span><span className="mini-tag">{incoterm.modes==='sea'?'Apenas transporte por água':'Todos os modais'}</span></div>
       <details className="minimal-disclosure"><summary>Custos, riscos e responsabilidades de {term}</summary><div className="info"><strong>{incoterm.name}</strong><p style={{margin:'7px 0'}}>{incoterm.description}</p><strong>Transferência de risco:</strong> {incoterm.risk}
         <p className="small-top" style={{marginBottom:0}}><strong>Despacho de exportação:</strong> {incoterm.exportClearance==='seller'?'vendedor':'comprador'} · <strong>Despacho de importação:</strong> {incoterm.importClearance==='seller'?'vendedor':'comprador'}</p></div></details>
@@ -513,7 +550,7 @@ export default function Simuladores(){
     return <section className="panel wizard-panel"><span className="eyebrow">ETAPA 06</span><h2>Resultado final e relatório</h2>
       <p className="page-lead">Confira o resumo da operação e gere um relatório com rota, mercadoria, Incoterm, custos, impostos estimados e checklist. Depois, use os botões separados para imprimir ou baixar um arquivo PDF.</p>
       <div className="grid-2 wizard-final-grid">
-        <div className="info"><strong>Rota e configuração</strong><p style={{margin:'8px 0 0'}}>{originMarket?.name??originCode} ({originCode}) → {destinationMarket?.name??destinationCode} ({destinationCode})<br/>{modal} · {incoterm.name}<br/>Mercadoria: {product}</p></div>
+        <div className="info"><strong>Rota e configuração</strong><p style={{margin:'8px 0 0'}}>{originMarket?.name??originCode} ({originCode}) → {destinationMarket?.name??destinationCode} ({destinationCode})<br/>{modeLabel} · {incoterm.name}<br/>Mercadoria: {product}</p></div>
         <div className="info"><strong>Situação da simulação</strong><p style={{margin:'8px 0 0'}}>Tributos: {taxCompleted?'completos':'pendentes'}<br/>Checklist: {checked.length} de {checklist.length} itens marcados<br/>Rota internacional: {international?'sim':'não'}</p></div>
       </div>
       <div className="subline"><span>Valor da mercadoria</span><strong>{formatUsd(prices.goods)}</strong></div>
@@ -551,7 +588,9 @@ export default function Simuladores(){
         </div>
       </div>
       <aside className="sim-summary"><div className="panel sticky"><span className="eyebrow">PAINEL DA SIMULAÇÃO</span><h2 className="trade-route">{originMarket?.name??originCode} <ArrowLeftRight size={20}/> {destinationMarket?.name??destinationCode}</h2>
-        <div className="flex-head"><span className="mini-tag">{modal==='Marítimo'?<Ship size={14}/>:modal==='Aéreo'?<Plane size={14}/>:<Truck size={14}/>} {modal}</span><span className="mini-tag">{term}</span></div>
+        <div className="flex-head"><span className="mini-tag">{modal==='Marítimo'?<Ship size={14}/>:modal==='Aéreo'?<Plane size={14}/>:<Truck size={14}/>} {modeLabel}</span><span className="mini-tag">{term}</span></div>
+        {seaLeg&&<p className="transport-summary">{loadingPort?formatPort(loadingPort):'Embarque a definir'} → {dischargePort?formatPort(dischargePort):'Desembarque a definir'}</p>}
+        <p className="transport-summary">{qty} · {quantityLabel}</p>
         <p className="help">{op==='import'?'Visão do importador:':'Visão do exportador:'} simulação em USD, sem cálculo de taxas oficiais.</p>
 
         <div className="subline"><span>Mercadoria sem logística</span><strong>{formatUsd(prices.goods)}</strong></div>

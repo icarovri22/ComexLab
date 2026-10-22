@@ -1,0 +1,18 @@
+import {countries} from 'countries-list';
+import {PORT_RECORDS} from './ports-data';
+export type Port={id:string;name:string;country:string;locode:string;source:'wpi'|'authority'|'manual'};
+export const PORT_DATA_DATE='2026-10-22';
+export const PORT_DATA_SOURCE='https://arcgis.netl.doe.gov/server/rest/services/Hosted/CCS_EJ_SJ_Data/FeatureServer/17';
+export const PORT_AUTHORITY_SOURCES=[{name:'Complexo do Pecém',url:'https://www.complexodopecem.com.br/porto/'},{name:'Porto de Santos',url:'https://www.portodesantos.com.br/central-de-servicos/inclusao-e-carga-descarga-conteineres/'},{name:'Porto de Roterdã',url:'https://www.portofrotterdam.com/en/logistics/cargo/containers'},{name:'Shanghai International Port Group',url:'https://en.portshanghai.com.cn/OurServices/index.jhtml'}];
+const authority:Port[]=[{id:'authority-pecem',name:'Pecém',country:'BR',locode:'',source:'authority'},{id:'authority-santos',name:'Santos',country:'BR',locode:'',source:'authority'},{id:'authority-rotterdam',name:'Roterdã (Rotterdam)',country:'NL',locode:'',source:'authority'},{id:'authority-shanghai',name:'Xangai (Shanghai)',country:'CN',locode:'',source:'authority'}];
+export const CONTAINER_PORTS:ReadonlyArray<Port>=[...authority,...PORT_RECORDS.map(([id,name,country,locode]):Port=>({id,name,country,locode,source:'wpi'}))];
+const region=new Intl.DisplayNames(['pt-BR'],{type:'region'});
+export const countryName=(code:string)=>region.of(code)||code;
+export const formatPort=(port:Port)=>`${port.name} — ${countryName(port.country)}${port.locode?` (${port.locode})`:''}${port.source==='manual'?' · informado pelo usuário':''}`;
+const fold=(s:string)=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR');
+export function findPorts(query:string,country='',limit=60){const q=fold(query.trim());return CONTAINER_PORTS.filter(p=>(!country||p.country===country)&&(!q||fold(`${p.name} ${countryName(p.country)} ${p.country} ${p.locode}`).includes(q))).slice(0,limit)}
+export function restorePort(value:unknown):Port|null{
+ if(!value||typeof value!=='object')return null;const p=value as Record<string,unknown>;const catalog=CONTAINER_PORTS.find(x=>x.id===p.id);if(catalog)return catalog;
+ if(p.source==='manual'&&typeof p.name==='string'&&p.name.trim().length>0&&p.name.length<=120&&typeof p.country==='string'&&Object.hasOwn(countries,p.country))return {id:'manual',name:p.name.trim(),country:p.country,locode:'',source:'manual'};
+ return null;
+}

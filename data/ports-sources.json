@@ -1,0 +1,19 @@
+{
+  "retrievedAt": "2026-10-22",
+  "coverage": "Initial, non-exhaustive global container-port catalog; no service or direct-route guarantee",
+  "wpi": {
+    "publisher": "NGA World Port Index, snapshot hosted by US DOE / NETL",
+    "url": "https://arcgis.netl.doe.gov/server/rest/services/Hosted/CCS_EJ_SJ_Data/FeatureServer/17",
+    "filter": "fac_container = 'Yes' OR cranes_container = 'Yes'",
+    "records": 226,
+    "fields": ["wpinumber", "main_port_name", "unlocode", "wpi_cc"],
+    "countryMapping": "Valid UN/LOCODE ISO2 prefix, otherwise country-name mapping"
+  },
+  "supplemental": [
+    {"port": "Pecém", "country": "BR", "source": "https://www.complexodopecem.com.br/porto/"},
+    {"port": "Santos", "country": "BR", "source": "https://www.portodesantos.com.br/central-de-servicos/inclusao-e-carga-descarga-conteineres/"},
+    {"port": "Roterdã", "country": "NL", "source": "https://www.portofrotterdam.com/en/logistics/cargo/containers"},
+    {"port": "Xangai", "country": "CN", "source": "https://en.portshanghai.com.cn/OurServices/index.jhtml"}
+  ],
+  "manualEntries": "User-supplied and explicitly unverified; never promoted into the shared catalog"
+}

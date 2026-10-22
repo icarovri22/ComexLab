@@ -13,7 +13,7 @@ export const INCOTERMS:Incoterm[] = [
  {code:'CFR',name:'Cost and Freight — Custo e frete',modes:'sea',sellerCosts:['origin','loading','freight'],risk:'A bordo no embarque, apesar de o vendedor pagar frete até o porto nomeado.',exportClearance:'seller',importClearance:'buyer',description:'O pagamento do frete pelo vendedor não significa que ele conserva o risco até destino.'},
  {code:'CIF',name:'Cost, Insurance and Freight — Custo, seguro e frete',modes:'sea',sellerCosts:['origin','loading','freight','insurance'],risk:'A bordo no embarque, apesar de vendedor pagar frete e contratar seguro.',exportClearance:'seller',importClearance:'buyer',description:'Termo marítimo com seguro pelo vendedor; cobertura contratual exigida não é idêntica à de CIP.'},
 ];
-export const isCompatible = (code:string,modal:string)=> INCOTERMS.find(x=>x.code===code)?.modes!=='sea'||modal==='Marítimo';
+export const isCompatible = (code:string,modal:string,combinedModes:readonly string[]=[])=> INCOTERMS.find(x=>x.code===code)?.modes!=='sea'||modal==='Marítimo'||modal==='Fluvial'||modal==='Multimodal'&&combinedModes.some(m=>m==='Marítimo'||m==='Fluvial');
 export const getIncoterm = (code:string)=> INCOTERMS.find(x=>x.code===code)??INCOTERMS[0];
 export function allocate(rule:Incoterm,costs:Record<CostKey,number>){
  const result={seller:0,buyer:0};
