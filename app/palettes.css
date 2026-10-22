@@ -48,3 +48,5 @@ html[data-palette="petrol"][data-theme="dark"] .btn.secondary{color:var(--primar
 html[data-palette="petrol"][data-theme="dark"] .brand-logo-name{color:var(--deep)}
 html[data-palette="petrol"][data-theme="dark"] :focus-visible{outline-color:var(--primary)}
 .brand-logo-globe{background-image:var(--brand-globe-url,url("/comexhub-globe.svg"));background-size:contain;background-repeat:no-repeat;background-position:center}.brand-logo-name span{color:var(--brand-logo-accent,var(--primary))}
+/* Keep the wordmark neutral; only Hub follows the selected accent. */
+.brand-logo .brand-logo-name{color:var(--deep)}
