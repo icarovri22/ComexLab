@@ -1,4 +1,6 @@
 'use client';
+import {accountPreferenceKey,readAccountPreference} from '../../lib/account-preferences';
+import {accountFetch} from '../../lib/account-fetch';
 import {useEffect,useMemo,useState} from 'react';
 import Link from 'next/link';
 import {ArrowLeft,ArrowRight,BookOpen,CheckCircle2,ChevronRight,Clock3,ExternalLink,GraduationCap,Lightbulb,RotateCcw,Target,ClipboardCheck,BookMarked} from 'lucide-react';
@@ -12,14 +14,15 @@ const key='comexlab-study-progress-v1';
 
 type Answers=Record<number,number>;
 export default function Estudos(){
+ const [owner,setOwner]=useState<string|null>(null);
  const [all,setAll]=useState<Lesson[]>(baseAll);
  const [slug,setSlug]=useState<string|null>(null);
  const [answers,setAnswers]=useState<Answers>({});
  const [completed,setCompleted]=useState<string[]>([]);
  const [topic,setTopic]=useState('Todos');
- useEffect(()=>{try{const value=JSON.parse(window.localStorage.getItem(key)||'[]');if(Array.isArray(value))setCompleted(value.filter((s):s is string=>typeof s==='string'));}catch{}},[]);
- useEffect(()=>{let alive=true;fetch('/api/study-content',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(data=>{if(!alive||!data||typeof data.overrides!=='object')return;setAll(baseAll.map(lesson=>{const update=data.overrides[lesson.slug];return update&&typeof update==='object'?{...lesson,...update,slug:lesson.slug, duration:lesson.duration,references:lesson.references}:lesson}));}).catch(()=>{});return()=>{alive=false}},[]);
- useEffect(()=>{const candidate=new URLSearchParams(window.location.search).get('modulo');if(candidate&&baseAll.some(item=>item.slug===candidate)){setSlug(candidate);try{localStorage.setItem('comexhub:last-lesson',JSON.stringify({slug:candidate,title:baseAll.find(item=>item.slug===candidate)?.title||candidate}))}catch{}}},[]);
+ useEffect(()=>{let active=true;accountFetch('/api/auth',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(user=>{if(!active||!user?.loggedIn||typeof user.username!=='string')return;setOwner(user.username);try{const value=JSON.parse(readAccountPreference(key,user.username)||'[]');if(Array.isArray(value))setCompleted(value.filter((s):s is string=>typeof s==='string'));}catch{}}).catch(()=>{});return()=>{active=false}},[]);
+ useEffect(()=>{let alive=true;accountFetch('/api/study-content',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(data=>{if(!alive||!data||typeof data.overrides!=='object')return;setAll(baseAll.map(lesson=>{const update=data.overrides[lesson.slug];return update&&typeof update==='object'?{...lesson,...update,slug:lesson.slug, duration:lesson.duration,references:lesson.references}:lesson}));}).catch(()=>{});return()=>{alive=false}},[]);
+ useEffect(()=>{if(!owner)return;const candidate=new URLSearchParams(window.location.search).get('modulo');if(candidate&&baseAll.some(item=>item.slug===candidate)){setSlug(candidate);try{owner&&localStorage.setItem(accountPreferenceKey('comexhub:last-lesson',owner),JSON.stringify({slug:candidate,title:baseAll.find(item=>item.slug===candidate)?.title||candidate}))}catch{}}},[owner]);
  const lesson=all.find(x=>x.slug===slug);
  const expansion=slug?EXPANSIONS[slug]:null;
  const group=(s:string)=>['fundamentos','pesquisa-mercado','importacao','exportacao'].includes(s)?'Operações':['incoterms','ncm','modais','documentos','despacho-regimes'].includes(s)?'Processos':'Custos e estratégia';
@@ -28,8 +31,8 @@ export default function Estudos(){
  const correct=questions.filter((q,i)=>answers[i]===q.answer).length;
  const answered=Object.keys(answers).length;
  const progress=Math.round(completed.length/all.length*100);
- function open(id:string){setSlug(id);setAnswers({});try{localStorage.setItem('comexhub:last-lesson',JSON.stringify({slug:id,title:all.find(item=>item.slug===id)?.title||id}))}catch{}window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});}
- function finish(){if(!lesson||correct!==questions.length)return;setCompleted(prev=>{const next=[...new Set([...prev,lesson.slug])];try{window.localStorage.setItem(key,JSON.stringify(next))}catch{}return next;});}
+ function open(id:string){setSlug(id);setAnswers({});try{owner&&localStorage.setItem(accountPreferenceKey('comexhub:last-lesson',owner),JSON.stringify({slug:id,title:all.find(item=>item.slug===id)?.title||id}))}catch{}window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});}
+ function finish(){if(!owner||!lesson||correct!==questions.length)return;setCompleted(prev=>{const next=[...new Set([...prev,lesson.slug])];try{window.localStorage.setItem(accountPreferenceKey(key,owner),JSON.stringify(next))}catch{}return next;});}
  return <div className="study-page">
   <span className="eyebrow">ACADEMIA COMEXHUB · APRENDIZAGEM GUIADA</span>
   <div className="study-hero"><div><h1>Continue aprendendo.</h1><p>Retome uma aula ou explore um novo tema, no seu ritmo.</p><div className="study-hero-metrics"><span><BookOpen size={17}/> {all.length} módulos</span><span><ClipboardCheck size={17}/> {all.length*3} questões</span><span><GraduationCap size={17}/> Casos resolvidos</span></div></div><div className="study-progress"><div className="flex-head"><strong>Seu progresso neste navegador</strong><span>{progress}%</span></div><progress max={all.length} value={completed.length} aria-label="Módulos concluídos"/><small>{completed.length} de {all.length} módulos concluídos. O progresso é salvo localmente neste navegador.</small></div></div>

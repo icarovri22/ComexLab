@@ -1,4 +1,5 @@
 'use client';
+import {accountFetch} from '../lib/account-fetch';
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {ExternalLink,TrendingUp} from 'lucide-react';
 import {NEWS_CATEGORIES,type NewsArticle} from '../lib/comex-news';
@@ -14,7 +15,7 @@ function ExchangeChart({currency,refreshKey}:{currency:'USD'|'EUR';refreshKey:st
    controller?.abort();const request=new AbortController();controller=request;
    setLoading(true);setError('');
    try{
-    const response=await fetch('/api/news/indicators?currency='+currency,{cache:'no-store',signal:request.signal});const data=await response.json();
+    const response=await accountFetch('/api/news/indicators?currency='+currency,{cache:'no-store',signal:request.signal});const data=await response.json();
     if(!response.ok)throw Error(data.error||'Indicador indisponível');
     if(!Array.isArray(data.points)||data.points.length<2)throw Error('Sem dados suficientes');
     if(!request.signal.aborted){setPoints(data.points);setActive(null);}

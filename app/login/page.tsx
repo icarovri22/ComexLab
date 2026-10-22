@@ -1,4 +1,5 @@
 'use client';
+import {accountFetch} from '../../lib/account-fetch';
 
 import {useEffect,useState,type FormEvent} from 'react';
 import Link from 'next/link';
@@ -27,7 +28,7 @@ export default function Login(){
   const [recoveryCode,setRecoveryCode]=useState('');
 
   useEffect(()=>{
-    fetch('/api/auth',{cache:'no-store',credentials:'same-origin'})
+    accountFetch('/api/auth',{cache:'no-store',credentials:'same-origin'})
       .then(r=>{if(!r.ok)throw Error('Falha na conexão.');return r.json()})
       .then(setMe)
       .catch(()=>setMe({ready:false,loggedIn:false}));
@@ -38,7 +39,7 @@ export default function Login(){
     if(mode==='register'&&password!==repeat){setMessage('As senhas não coincidem.');return;}
     setLoading(true);
     try{
-      const response=await fetch('/api/auth',{
+      const response=await accountFetch('/api/auth',{
         method:'POST',credentials:'same-origin',cache:'no-store',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({mode,username,email:mode==='register'?email:undefined,password})
@@ -46,7 +47,7 @@ export default function Login(){
       const body=await response.json();
       if(!response.ok)throw new Error(body.error||'Não foi possível autenticar.');
       if(body.recoveryCode){setRecoveryCode(String(body.recoveryCode));setPassword('');setRepeat('');return;}
-      const check=await fetch('/api/auth',{cache:'no-store',credentials:'same-origin'});
+      const check=await accountFetch('/api/auth',{cache:'no-store',credentials:'same-origin'});
       const session:Session|null=check.ok?await check.json():null;
       setPassword('');setRepeat('');
       if(!session?.loggedIn){
@@ -63,7 +64,7 @@ export default function Login(){
   async function logout(){
     setLoading(true);setMessage('');
     try{
-      const response=await fetch('/api/auth',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'logout'})});
+      const response=await accountFetch('/api/auth',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'logout'})});
       if(!response.ok)throw Error('Não foi possível encerrar a sessão.');
       setMe({ready:true,loggedIn:false});setPassword('');setMessage('Sessão encerrada com sucesso.');
     }catch(error){setMessage(error instanceof Error?error.message:'Falha ao sair.');}
@@ -104,6 +105,8 @@ export default function Login(){
             <p className="auth-description">Olá, <strong>{me.username}</strong>. Você já pode acessar os simuladores e os conteúdos de estudo.</p>
             <Link href={typeof window==='undefined'?'/':returnPath()} className="auth-action">Acessar a plataforma <ArrowRight size={18}/></Link>
             <Link className="auth-outline" href="/seguranca">Segurança da conta e recuperação</Link>
+            <a className="auth-outline" href="/login?nova-conta=1" target="_blank" rel="noopener noreferrer">Abrir outra conta em nova aba</a>
+            <p className="auth-description">Cada aba mantém a conta escolhida. Sair aqui não encerra as outras contas.</p>
             <button type="button" className="auth-outline" onClick={logout} disabled={loading}><LogOut size={17}/> Sair da conta</button>
           </>:<>
             <span className="auth-eyebrow"><LockKeyhole size={14}/> ACESSO À PLATAFORMA</span>

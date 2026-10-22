@@ -1,7 +1,8 @@
+import {selectedSession,sessionCookieName} from '../../../lib/account-session';
 import {NextRequest,NextResponse} from 'next/server';
 import {compare,hash} from 'bcryptjs';
 import {queryDB,verifiedAccount,noStore} from '../../../lib/admin-auth';
-import {canAuth,clearSessions,cookieName,randomRecoveryCode,recoveryHash,setSession,signSession} from '../../../lib/security';
+import {canAuth,clearSessions,randomRecoveryCode,recoveryHash,setSession,signSession} from '../../../lib/security';
 
 export const runtime='nodejs';
 const fail=(error:string,status:number)=>NextResponse.json({error},{status,headers:noStore});
@@ -14,17 +15,18 @@ async function clearAttempts(label:string){const sql=queryDB();await sql`DELETE 
 
 export async function GET(req:NextRequest){
  if(!canAuth())return NextResponse.json({ready:false,loggedIn:false,emailConfirmation:false},{headers:noStore});
- const me=await verifiedAccount(req.cookies.get(cookieName)?.value);
+ const me=await verifiedAccount(selectedSession(req));
  return NextResponse.json({ready:true,loggedIn:Boolean(me),username:me?.username,isAdmin:me?.role==='admin',emailConfirmation:false},{headers:noStore});
 }
 export async function POST(req:NextRequest){
+ if(!sessionCookieName(req))return fail('Identificação da aba inválida.',400);
  const origin=req.headers.get('origin');
  if(!origin)return fail('Origem da requisição obrigatória.',403);
  try{if(new URL(origin).host!==req.nextUrl.host)return fail('Origem não autorizada.',403)}catch{return fail('Origem inválida.',403)}
  let body:Record<string,unknown>;
  try{const raw=await req.text();if(raw.length>5000)return fail('Requisição muito grande.',413);body=JSON.parse(raw);}catch{return fail('Requisição inválida.',400)}
  if(!body||typeof body!=='object')return fail('Requisição inválida.',400);
- if(body.mode==='logout'){const r=NextResponse.json({ok:true},{headers:noStore});clearSessions(r);return r;}
+ if(body.mode==='logout'){const r=NextResponse.json({ok:true},{headers:noStore});clearSessions(r,req);return r;}
  if(!canAuth())return fail('Serviço de contas indisponível.',503);
  const sql=queryDB();
  if(body.mode!=='register'&&body.mode!=='login')return fail('Operação inválida.',400);
@@ -45,7 +47,7 @@ export async function POST(req:NextRequest){
    const id=String(created[0].id);const recoveryCode=randomRecoveryCode();
    await sql`UPDATE comexlab_users SET recovery_code_hash=${recoveryHash(id,recoveryCode)} WHERE id=${id}`;
    const session=await signSession(id,identity,0,false,false);
-   const r=NextResponse.json({ok:true,username:identity,recoveryCode,emailConfirmation:false},{headers:noStore});setSession(r,session);return r;
+   const r=NextResponse.json({ok:true,username:identity,recoveryCode,emailConfirmation:false},{headers:noStore});setSession(r,session,req);return r;
   }
   if(!(usernameOk(identity)||emailOk(identity)))return fail('Informe seu usuário ou e-mail.',400);
   const identityKey=`login:${identity}`,ipKey=`login-ip:${readIP(req)}`;
@@ -56,6 +58,6 @@ export async function POST(req:NextRequest){
   if(users[0].is_active!==true)return fail('Esta conta está desativada.',403);
   await clearAttempts(identityKey);
   const session=await signSession(String(users[0].id),String(users[0].username),Number(users[0].session_version),false,users[0].role==='admin');
-  const r=NextResponse.json({ok:true,username:users[0].username},{headers:noStore});setSession(r,session);return r;
+  const r=NextResponse.json({ok:true,username:users[0].username},{headers:noStore});setSession(r,session,req);return r;
  }catch(error){console.error('Authentication unavailable:',error instanceof Error?error.message:'unknown');return fail('Não foi possível concluir o acesso.',503)}
 }

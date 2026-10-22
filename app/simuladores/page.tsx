@@ -1,4 +1,5 @@
 'use client';
+import {accountFetch} from '../../lib/account-fetch';
 
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {countries} from 'countries-list';
@@ -162,13 +163,13 @@ export default function Simuladores(){
   const [storageNotice,setStorageNotice]=useState('');
   useEffect(()=>{
     let active=true;
-    fetch('/api/auth',{cache:'no-store'}).then(r=>r.json()).then(async user=>{
+    accountFetch('/api/auth',{cache:'no-store'}).then(r=>r.json()).then(async user=>{
       if(!active)return;
       const username=user?.loggedIn&&typeof user.username==='string'?user.username:null;
       if(!username){setStorageOwner(null);setStorageReady(true);return;}
       setStorageOwner(username);
       try{
-        const remote=await fetch('/api/simulations',{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null);
+        const remote=await accountFetch('/api/simulations',{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null);
         if(!active)return;
         const saved=chooseSimulationDraft(readStoredJson(`comexhub:sim:draft:${username}`),remote?.draft);
         if(saved&&typeof saved==='object'){
@@ -215,14 +216,14 @@ export default function Simuladores(){
   useEffect(()=>{
     if(!storageOwner||!storageReady)return;
     try{localStorage.setItem(`comexhub:sim:draft:${storageOwner}`,JSON.stringify({op,originCode,destinationCode,product,ncm,modal,combinedModes,loadingPort,dischargePort,quantityUnit,quantityOther,term,qty,unit,fx,origin,loading,freight,insurance,lastMile,unloading,fees,destDuty,vat,ii,ipi,pis,cofins,icms,checked,step}));}catch{/* Storage may be disabled or full. */}
-    const timer=setTimeout(()=>{fetch('/api/simulations',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({op,originCode,destinationCode,product,ncm,modal,combinedModes,loadingPort,dischargePort,quantityUnit,quantityOther,term,qty,unit,fx,origin,loading,freight,insurance,lastMile,unloading,fees,destDuty,vat,ii,ipi,pis,cofins,icms,checked,step})}).catch(()=>{})},900);return ()=>clearTimeout(timer);
+    const timer=setTimeout(()=>{accountFetch('/api/simulations',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({op,originCode,destinationCode,product,ncm,modal,combinedModes,loadingPort,dischargePort,quantityUnit,quantityOther,term,qty,unit,fx,origin,loading,freight,insurance,lastMile,unloading,fees,destDuty,vat,ii,ipi,pis,cofins,icms,checked,step})}).catch(()=>{})},900);return ()=>clearTimeout(timer);
   },[storageOwner,storageReady,op,originCode,destinationCode,product,ncm,modal,combinedModes,loadingPort,dischargePort,quantityUnit,quantityOther,term,qty,unit,fx,origin,loading,freight,insurance,lastMile,unloading,fees,destDuty,vat,ii,ipi,pis,cofins,icms,checked,step]);
   async function saveSimulation(data:SimulationReport){
     if(!storageOwner)return;
     setStorageNotice('Salvando relatório…');
     let saved:SimulationReport=data;
     try{
-      const response=await fetch('/api/simulations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+      const response=await accountFetch('/api/simulations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
       if(!response.ok)throw Error('Não foi possível salvar no servidor.');
       const result=await response.json();if(typeof result.id!=='string')throw Error('Resposta inválida.');
       saved={...data,serverId:result.id};setStorageNotice('Relatório salvo na sua conta.');
@@ -238,7 +239,7 @@ export default function Simuladores(){
     const row=history[index];if(!row)return;
     try{
       if(row.serverId){
-        const response=await fetch('/api/simulations?id='+encodeURIComponent(row.serverId),{method:'DELETE'});
+        const response=await accountFetch('/api/simulations?id='+encodeURIComponent(row.serverId),{method:'DELETE'});
         if(!response.ok)throw Error('Falha ao excluir.');
       }
       setHistory(previous=>{const next=previous.filter(item=>item!==row);try{localStorage.setItem(`comexhub:sim:history:${storageOwner}`,JSON.stringify(next))}catch{}return next;});

@@ -1,3 +1,4 @@
+import {selectedSession} from '../../../lib/account-session';
 import {NextRequest,NextResponse} from 'next/server';
 import {verifiedAccount,queryDB,noStore} from '../../../lib/admin-auth';
 import {validateFeedback} from '../../../lib/feedback';
@@ -9,7 +10,7 @@ function sameOrigin(req:NextRequest){
  if(!origin)return false;
  try{return new URL(origin).host===req.nextUrl.host}catch{return false}
 }
-const authenticated=(req:NextRequest)=>verifiedAccount(req.cookies.get('comexlab_session')?.value);
+const authenticated=(req:NextRequest)=>verifiedAccount(selectedSession(req));
 
 export async function GET(req:NextRequest){
  const account=await authenticated(req);

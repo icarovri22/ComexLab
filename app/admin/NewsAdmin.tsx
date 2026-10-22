@@ -1,4 +1,5 @@
 'use client';
+import {accountFetch} from '../../lib/account-fetch';
 import {useState} from 'react';
 import {ArrowUpRight,CheckCircle2,Clock,EyeOff,Newspaper,RefreshCcw,Save,Star,UploadCloud} from 'lucide-react';
 import {COUNTRY_LABELS,NEWS_CATEGORIES,type NewsArticle} from '../../lib/comex-news';
@@ -16,7 +17,7 @@ export default function NewsAdmin({data,busy,onAction,onRefresh}:{data:NewsAdmin
  const [syncing,setSyncing]=useState(false);const [syncStatus,setSyncStatus]=useState('');
  const [editingId,setEditingId]=useState<string|null>(null);const [translationForm,setTranslationForm]=useState({title_pt:'',summary_pt:''});
  const rows=(Array.isArray(data.news)?data.news:[]).filter(row=>filter==='all'||row.status===filter);
- async function synchronize(){setSyncing(true);setSyncStatus('');try{const response=await fetch('/api/news/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});const result=await response.json();if(!response.ok)throw Error(result.error||'Falha ao atualizar.');setSyncStatus(result.alreadyRunning?'Já existe uma atualização em andamento.':`Concluído: ${result.added} notícias importadas, ${result.translated||0} traduzidas, ${result.checked} fontes, ${result.failures} falhas. Traduções pendentes serão retomadas na próxima atualização.`);onRefresh()}catch(e){setSyncStatus(e instanceof Error?e.message:'Erro na atualização.')}finally{setSyncing(false)}}
+ async function synchronize(){setSyncing(true);setSyncStatus('');try{const response=await accountFetch('/api/news/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});const result=await response.json();if(!response.ok)throw Error(result.error||'Falha ao atualizar.');setSyncStatus(result.alreadyRunning?'Já existe uma atualização em andamento.':`Concluído: ${result.added} notícias importadas, ${result.translated||0} traduzidas, ${result.checked} fontes, ${result.failures} falhas. Traduções pendentes serão retomadas na próxima atualização.`);onRefresh()}catch(e){setSyncStatus(e instanceof Error?e.message:'Erro na atualização.')}finally{setSyncing(false)}}
  async function submitManual(){const ok=await onAction({action:'news.create',...form});if(ok){setShowForm(false);setForm({...blank});}}
  async function saveTranslation(id:string){const ok=await onAction({action:'news.translation',id,...translationForm});if(ok){setEditingId(null);}}
  return <div className="news-admin-area">

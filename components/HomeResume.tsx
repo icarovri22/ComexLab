@@ -1,4 +1,6 @@
 'use client';
+import {readAccountPreference} from '../lib/account-preferences';
+import {accountFetch} from '../lib/account-fetch';
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
 import {ArrowRight} from 'lucide-react';
@@ -7,9 +9,9 @@ export default function HomeResume(){
  const [draft,setDraft]=useState(false);
  useEffect(()=>{
   let alive=true;
-  try{const found=JSON.parse(localStorage.getItem('comexhub:last-lesson')||'null');if(found&&typeof found.slug==='string'&&/^[a-z-]{1,60}$/.test(found.slug)&&typeof found.title==='string'&&found.title.length<=200)setLesson({slug:found.slug,title:found.title});}catch{}
-  fetch('/api/auth',{cache:'no-store'}).then(response=>response.ok?response.json():null).then(user=>{
+  accountFetch('/api/auth',{cache:'no-store'}).then(response=>response.ok?response.json():null).then(user=>{
    if(!alive||!user?.loggedIn||typeof user.username!=='string')return;
+  try{const found=JSON.parse(readAccountPreference('comexhub:last-lesson',user.username)||'null');if(found&&typeof found.slug==='string'&&/^[a-z-]{1,60}$/.test(found.slug)&&typeof found.title==='string'&&found.title.length<=200)setLesson({slug:found.slug,title:found.title});}catch{}
    try{const stored=JSON.parse(localStorage.getItem(`comexhub:sim:draft:${user.username}`)||'null');if(stored&&typeof stored==='object'&&!Array.isArray(stored))setDraft(true);}catch{}
   }).catch(()=>{});
   return()=>{alive=false};

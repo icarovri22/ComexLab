@@ -1,10 +1,11 @@
+import {selectedSession} from '../../../lib/account-session';
 import {NextRequest,NextResponse} from 'next/server';
 import {queryDB,noStore,verifiedAccount} from '../../../lib/admin-auth';
 import {newsMonth} from '../../../lib/news-period';
 import {NEWS_CATEGORIES,COUNTRY_LABELS} from '../../../lib/comex-news';
 export const runtime='nodejs';
 export async function GET(req:NextRequest){
- const user=await verifiedAccount(req.cookies.get('comexlab_session')?.value);
+ const user=await verifiedAccount(selectedSession(req));
  if(!user)return NextResponse.json({error:'Acesse sua conta para ler notícias.'},{status:401,headers:noStore});
  const params=req.nextUrl.searchParams;
  const category=params.get('category')||'all';const country=params.get('country')||'all';const term=(params.get('q')||'').trim().slice(0,80);

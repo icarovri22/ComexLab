@@ -1,4 +1,5 @@
 'use client';
+import {accountFetch} from '../../lib/account-fetch';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {newsMonth} from '../../lib/news-period';
 import NewsDashboard from '../../components/NewsDashboard';
@@ -20,7 +21,7 @@ export default function NewsPage(){
   const ticket=++requestVersion.current;
   setLoading(true);setError('');
   try{
-   const p=new URLSearchParams({category,country,q:search});const response=await fetch('/api/news?'+p.toString(),{cache:'no-store',credentials:'same-origin',signal});
+   const p=new URLSearchParams({category,country,q:search});const response=await accountFetch('/api/news?'+p.toString(),{cache:'no-store',credentials:'same-origin',signal});
    const result=await response.json();if(!response.ok)throw new Error(result.error||'Não foi possível consultar notícias.');
    if(!Array.isArray(result.news))throw new Error('Resposta inválida do servidor.');
    if(!signal?.aborted&&ticket===requestVersion.current){setMonthLabel(result.month?.label||newsMonth().label);setItems(result.news);setLastSync(result.lastSync||null);setSources(Array.isArray(result.sources)?result.sources:[])}

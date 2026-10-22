@@ -1,4 +1,5 @@
 'use client';
+import {accountFetch} from '../../lib/account-fetch';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {BookOpen,CheckCircle2,ChevronRight,ClipboardList,LayoutDashboard,LoaderCircle,Save,Settings,ShieldCheck,ShieldX,Users,RotateCcw,MessageSquareHeart,Star,ArrowUpRight,Newspaper} from 'lucide-react';
 import type {Lesson} from '../../lib/lessons';
@@ -41,7 +42,7 @@ export default function AdminConsole({username}:{username:string}){
   const request=++lastRequest.current;
   setLoading(true);setFailure('');setLoaded(null);
   try{
-   const r=await fetch(`/api/admin?view=${target}`,{cache:'no-store',signal,credentials:'same-origin'});
+   const r=await accountFetch(`/api/admin?view=${target}`,{cache:'no-store',signal,credentials:'same-origin'});
    const body=await r.json();
    if(!r.ok)throw new Error(body?.error||'Não foi possível carregar os dados.');
    if(target==='users'&&!Array.isArray(body?.users))throw new Error('A lista de usuários retornou dados inválidos. Tente atualizar.');
@@ -66,7 +67,7 @@ export default function AdminConsole({username}:{username:string}){
  },[tab,refresh]);
  async function submit(payload:Record<string,unknown>){
   setBusy(true);setStatus('');setFailure('');
-  try{const r=await fetch('/api/admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const body=await r.json();if(!r.ok)throw new Error(body.error||'Falha ao salvar.');setStatus('Alteração salva com sucesso.');await refresh(tab);return true}
+  try{const r=await accountFetch('/api/admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const body=await r.json();if(!r.ok)throw new Error(body.error||'Falha ao salvar.');setStatus('Alteração salva com sucesso.');await refresh(tab);return true}
   catch(e){setFailure(e instanceof Error?e.message:'Erro ao salvar.');return false}
   finally{setBusy(false)}
  }

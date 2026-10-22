@@ -1,4 +1,5 @@
 'use client';
+import {accountFetch} from '../../lib/account-fetch';
 import {useCallback,useEffect,useState} from 'react';
 import {CheckCircle2,MessageSquareHeart,Send,Star,RotateCcw} from 'lucide-react';
 import {MAX_FEEDBACK_LENGTH} from '../../lib/feedback';
@@ -14,7 +15,7 @@ export default function AvaliarPage(){
  const [error,setError]=useState('');
  const [success,setSuccess]=useState(false);
  const load=useCallback(async()=>{
-  try{const res=await fetch('/api/feedback',{cache:'no-store'});const body=await res.json();if(!res.ok)throw Error(body?.error||'Falha ao carregar.');setEntries(Array.isArray(body?.feedback)?body.feedback:[])}
+  try{const res=await accountFetch('/api/feedback',{cache:'no-store'});const body=await res.json();if(!res.ok)throw Error(body?.error||'Falha ao carregar.');setEntries(Array.isArray(body?.feedback)?body.feedback:[])}
   catch(e){setError(e instanceof Error?e.message:'Falha ao consultar envios.')}finally{setLoading(false)}
  },[]);
  useEffect(()=>{void load()},[load]);
@@ -23,7 +24,7 @@ export default function AvaliarPage(){
   if(!rating&&!suggestion.trim()){setError('Escolha uma nota ou escreva uma sugestão.');return}
   setBusy(true);
   try{
-   const r=await fetch('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({rating,suggestion})});
+   const r=await accountFetch('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({rating,suggestion})});
    const data=await r.json();if(!r.ok)throw Error(data?.error||'Falha ao enviar.');
    setSuccess(true);setRating(null);setSuggestion('');await load();
   }catch(e){setError(e instanceof Error?e.message:'Falha no envio.')}

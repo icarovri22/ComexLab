@@ -1,3 +1,4 @@
+import * as accountSession from '../lib/account-session.ts';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import assert from 'node:assert/strict';
@@ -9,6 +10,7 @@ const source=readFileSync(resolve(dirname(fileURLToPath(import.meta.url)),'../li
 const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
 const mod={exports:{}};
 const stubRequire=(name)=>{
+ if(name==='./account-session')return accountSession;
  if(name==='jose')return {SignJWT:class {},jwtVerify:async()=>({})};
  if(name==='next/server')return {NextResponse:class{}};
  return require(name);

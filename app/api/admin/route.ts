@@ -1,3 +1,4 @@
+import {selectedSession} from '../../../lib/account-session';
 import {NextRequest,NextResponse} from 'next/server';
 import {verifiedAdmin,queryDB,noStore} from '../../../lib/admin-auth';
 import {isProtectedAdministrator,PROTECTED_ADMIN_ID,PROTECTED_ADMIN_USERNAME,PROTECTED_OWNER_ID,PROTECTED_OWNER_USERNAME,protectedAdminMessage} from '../../../lib/protected-admin';
@@ -11,7 +12,7 @@ const bySlug=new Map(baseLessons.map(x=>[x.slug,x]));
 const fail=(error:string,status:number)=>NextResponse.json({error},{status,headers:noStore});
 const isString=(s:unknown,max:number)=>typeof s==='string'&&s.trim().length>0&&s.length<=max;
 
-async function getActor(req:NextRequest){return verifiedAdmin(req.cookies.get('comexlab_session')?.value)}
+async function getActor(req:NextRequest){return verifiedAdmin(selectedSession(req))}
 
 export async function GET(req:NextRequest){
  const actor=await getActor(req);

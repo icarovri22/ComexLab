@@ -1,4 +1,5 @@
 'use client';
+import {accountFetch} from '../../lib/account-fetch';
 import {useEffect,useState,type FormEvent} from 'react';
 import Link from 'next/link';
 import {CheckCircle2,KeyRound,ShieldCheck} from 'lucide-react';
@@ -11,12 +12,12 @@ export default function ResetFromEmail(){
   setToken(raw);
   // Remove sensitive token from address bar / browser history after capturing it.
   window.history.replaceState(null,'',window.location.pathname);
-  fetch('/api/email-recovery',{method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store',body:JSON.stringify({mode:'validate',token:raw})})
+  accountFetch('/api/email-recovery',{method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store',body:JSON.stringify({mode:'validate',token:raw})})
    .then(async r=>{const data=await r.json();if(!r.ok)throw Error(data.error||'Não foi possível validar o link.');setValid(data.valid===true)})
    .catch(error=>{setValid(false);setMessage(error instanceof Error?error.message:'Falha ao validar link.')});
  },[]);
  async function submit(e:FormEvent){e.preventDefault();setMessage('');if(newPassword!==repeat){setMessage('As senhas não coincidem.');return;}setSaving(true);
-  try{const r=await fetch('/api/email-recovery',{method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store',body:JSON.stringify({mode:'reset',token,password:newPassword})});const d=await r.json();if(!r.ok)throw Error(d.error||'Não foi possível alterar sua senha.');setDone(true);setToken('');setNewPassword('');setRepeat('');}
+  try{const r=await accountFetch('/api/email-recovery',{method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store',body:JSON.stringify({mode:'reset',token,password:newPassword})});const d=await r.json();if(!r.ok)throw Error(d.error||'Não foi possível alterar sua senha.');setDone(true);setToken('');setNewPassword('');setRepeat('');}
   catch(error){setMessage(error instanceof Error?error.message:'Falha ao alterar senha.')}finally{setSaving(false)}
  }
  return <div className="security-standalone"><main className="security-card"><span className="auth-eyebrow"><ShieldCheck size={15}/> COMEXHUB · RECUPERAÇÃO POR E-MAIL</span><h1>Crie sua nova senha</h1>

@@ -1,4 +1,5 @@
 'use client';
+import {accountFetch} from '../../lib/account-fetch';
 import {useEffect,useRef,useState} from 'react';
 import Link from 'next/link';
 import {ShieldCheck,Copy,KeyRound,CheckCircle2,LockKeyhole,Mail,Info} from 'lucide-react';
@@ -14,10 +15,10 @@ export default function SecurityPage(){
  const [email,setEmail]=useState('');
  const [message,setMessage]=useState('');
  const [error,setError]=useState('');
- const refresh=()=>fetch('/api/security',{cache:'no-store'}).then(async r=>{
+ const refresh=()=>accountFetch('/api/security',{cache:'no-store'}).then(async r=>{
   const data=await r.json();if(!r.ok)throw Error(data.error||'Acesso negado');setStatus(data);
   if(data.showSecurityReminder===true){
-   const response=await fetch('/api/security',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'reminder.claim'})});
+   const response=await accountFetch('/api/security',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'reminder.claim'})});
    const result=await response.json();
    if(response.ok&&result.show===true&&reminderDialog.current&&!reminderDialog.current.open)reminderDialog.current.showModal();
   }
@@ -26,7 +27,7 @@ export default function SecurityPage(){
  async function action(mode:'recovery.rotate'|'password.change'|'email.add'){
   setLoading(true);setError('');setMessage('');
   try{
-   const r=await fetch('/api/security',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode,password,newPassword,email})});
+   const r=await accountFetch('/api/security',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode,password,newPassword,email})});
    const data=await r.json();if(!r.ok)throw Error(data.error||'Não foi possível concluir a operação.');
    if(mode==='recovery.rotate'){setRecovery(data.recoveryCode);setMessage('Novo código de recuperação gerado. O anterior foi invalidado.');}
    if(mode==='password.change'){setMessage('Senha atualizada. Sessões antigas invalidadas.');}

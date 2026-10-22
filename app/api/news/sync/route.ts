@@ -1,3 +1,4 @@
+import {selectedSession} from '../../../../lib/account-session';
 import {NextRequest,NextResponse} from 'next/server';
 import {verifiedAdmin,noStore} from '../../../../lib/admin-auth';
 import {synchronizeNews} from '../../../../lib/news-sync';
@@ -10,7 +11,7 @@ export async function GET(req:NextRequest){
  try{return NextResponse.json(await synchronizeNews(),{headers:noStore})}catch(e){console.error('Cron news sync error',e instanceof Error?e.message:'unknown');return fail('Falha ao atualizar notícias.',503)}
 }
 export async function POST(req:NextRequest){
- const actor=await verifiedAdmin(req.cookies.get('comexlab_session')?.value);
+ const actor=await verifiedAdmin(selectedSession(req));
  if(!actor)return fail('Acesso restrito.',403);
  const origin=req.headers.get('origin');
  try{if(!origin||new URL(origin).host!==req.nextUrl.host)return fail('Origem não autorizada.',403)}catch{return fail('Origem inválida.',403)}

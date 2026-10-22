@@ -1,6 +1,6 @@
+import {selectedSession} from '../../../lib/account-session';
 import {NextRequest,NextResponse} from 'next/server';
 import {verifiedAccount,queryDB,noStore} from '../../../lib/admin-auth';
-import {cookieName} from '../../../lib/security';
 import {AI_INSTRUCTIONS,AI_MODEL_DEFAULT,answerFromResponse,clampDailyLimit,validateQuestion,validRating} from '../../../lib/comex-ai';
 
 export const runtime='nodejs';
@@ -13,7 +13,7 @@ async function settings(){const db=queryDB();const rows=await db`SELECT key,valu
 
 export async function GET(req:NextRequest){
  if(AI_UNDER_MAINTENANCE)return fail('ComexHub IA temporariamente indisponível para manutenção.',503);
- const me=await verifiedAccount(req.cookies.get(cookieName)?.value);if(!me)return fail('Faça login para usar a ComexHub IA.',401);
+ const me=await verifiedAccount(selectedSession(req));if(!me)return fail('Faça login para usar a ComexHub IA.',401);
  try{
   const db=queryDB();const [cfg,history,usage]=await Promise.all([settings(),
    db`SELECT id::text,prompt,answer,rating,created_at FROM comexlab_ai_questions WHERE user_id=${me.id} AND status='complete' ORDER BY created_at DESC LIMIT 25`,
@@ -24,7 +24,7 @@ export async function GET(req:NextRequest){
 export async function POST(req:NextRequest){
  if(AI_UNDER_MAINTENANCE)return fail('ComexHub IA temporariamente indisponível para manutenção.',503);
  if(!sameOrigin(req))return fail('Origem da solicitação inválida.',403);
- const me=await verifiedAccount(req.cookies.get(cookieName)?.value);if(!me)return fail('Faça login para conversar com a IA.',401);
+ const me=await verifiedAccount(selectedSession(req));if(!me)return fail('Faça login para conversar com a IA.',401);
  let data:Record<string,unknown>;try{const raw=await req.text();if(raw.length>3200)return fail('Mensagem acima do limite.',413);data=JSON.parse(raw);}catch{return fail('Mensagem inválida.',400)}
  if(!data||typeof data!=='object')return fail('Dados inválidos.',400);
  const db=queryDB();

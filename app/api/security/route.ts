@@ -1,13 +1,14 @@
+import {selectedSession} from '../../../lib/account-session';
 import {NextRequest,NextResponse} from 'next/server';
 import {compare,hash} from 'bcryptjs';
 import {queryDB,verifiedAccount,noStore} from '../../../lib/admin-auth';
-import {cookieName,canAuth,randomRecoveryCode,recoveryHash,setSession,signSession} from '../../../lib/security';
+import {canAuth,randomRecoveryCode,recoveryHash,setSession,signSession} from '../../../lib/security';
 import {normalizeEmail,validEmail} from '../../../lib/email-reset';
 
 export const runtime='nodejs';
 const fail=(error:string,status:number)=>NextResponse.json({error},{status,headers:noStore});
 const validateOrigin=(req:NextRequest)=>{const origin=req.headers.get('origin');if(!origin)return false;try{return new URL(origin).host===req.nextUrl.host}catch{return false}};
-const getActor=(req:NextRequest)=>verifiedAccount(req.cookies.get(cookieName)?.value);
+const getActor=(req:NextRequest)=>verifiedAccount(selectedSession(req));
 
 export async function GET(req:NextRequest){
  const account=await getActor(req);if(!account)return fail('Entre na sua conta.',401);
@@ -55,6 +56,6 @@ export async function POST(req:NextRequest){
   const passwordHash=await hash(replacement,12);
   const saved=await sql`UPDATE comexlab_users SET password_hash=${passwordHash},session_version=session_version+1 WHERE id=${account.id} RETURNING session_version`;
   const session=await signSession(account.id,account.username,Number(saved[0].session_version),false,account.role==='admin');
-  const r=NextResponse.json({ok:true},{headers:noStore});setSession(r,session);return r;
+  const r=NextResponse.json({ok:true},{headers:noStore});setSession(r,session,req);return r;
  }catch(error){console.error('Security update failed:',error instanceof Error?error.message:'unknown');return fail('Não foi possível concluir a operação.',503)}
 }

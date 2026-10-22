@@ -1,3 +1,4 @@
+import {sessionCookieName} from './account-session';
 import {createCipheriv,createDecipheriv,createHmac,createHash,randomBytes,timingSafeEqual} from 'node:crypto';
 import {SignJWT,jwtVerify} from 'jose';
 import {NextResponse} from 'next/server';
@@ -23,11 +24,12 @@ export async function verifyJwt(token:string|undefined){
   return payload;
  }catch{return null}
 }
-export function setSession(res:NextResponse,session:{token:string;age:number}){
- res.cookies.set(cookieName,session.token,cookieOptions(session.age));
+export function setSession(res:NextResponse,session:{token:string;age:number},req?:Parameters<typeof sessionCookieName>[0]){
+ const name=req?sessionCookieName(req):cookieName;if(!name)throw Error('Sessão de aba inválida.');
+ res.cookies.set(name,session.token,cookieOptions(session.age));
  res.cookies.set(challengeCookie,'',cookieOptions(0));
 }
-export function clearSessions(res:NextResponse){res.cookies.set(cookieName,'',cookieOptions(0));res.cookies.set(challengeCookie,'',cookieOptions(0));}
+export function clearSessions(res:NextResponse,req?:Parameters<typeof sessionCookieName>[0]){const name=req?sessionCookieName(req):cookieName;if(name)res.cookies.set(name,'',cookieOptions(0));res.cookies.set(challengeCookie,'',cookieOptions(0));}
 export function randomRecoveryCode(){const s=randomBytes(12).toString('hex').toUpperCase();return s.match(/.{1,6}/g)!.join('-');}
 export function randomMfaBackupCode(){return randomBytes(9).toString('hex').toUpperCase().match(/.{1,6}/g)!.join('-');}
 export function normalizeCode(code:string){return code.toUpperCase().replace(/[^A-Z0-9]/g,'');}

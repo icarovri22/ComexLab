@@ -1,4 +1,6 @@
 'use client';
+import {accountPreferenceKey,readAccountPreference} from '../../lib/account-preferences';
+import {accountFetch} from '../../lib/account-fetch';
 import './ncm-upgrade.css';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import Link from 'next/link';
@@ -42,24 +44,22 @@ export default function Ncm(){
  const [favorites,setFavorites]=useState<NcmRecord[]>([]);
  const [recents,setRecents]=useState<NcmRecord[]>([]);
  const [copied,setCopied]=useState(false);
+ const [owner,setOwner]=useState<string|null>(null);
  const [loadedPrefs,setLoadedPrefs]=useState(false);
 
- useEffect(()=>{
-  try {
-   const fav=JSON.parse(localStorage.getItem('comexlab_ncm_favorites')||'[]');
-   const recent=JSON.parse(localStorage.getItem('comexlab_ncm_recent')||'[]');
-   if(Array.isArray(fav))setFavorites(fav.slice(0,70));
-   if(Array.isArray(recent))setRecents(recent.slice(0,10));
-  } catch {} finally {setLoadedPrefs(true);}
- },[]);
- useEffect(()=>{if(loadedPrefs)try{localStorage.setItem('comexlab_ncm_favorites',JSON.stringify(favorites));}catch{}},[favorites,loadedPrefs]);
- useEffect(()=>{if(loadedPrefs)try{localStorage.setItem('comexlab_ncm_recent',JSON.stringify(recents));}catch{}},[recents,loadedPrefs]);
+ useEffect(()=>{let active=true;accountFetch('/api/auth',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(user=>{if(!active||!user?.loggedIn||typeof user.username!=='string')return;setOwner(user.username);try{
+ const fav=JSON.parse(readAccountPreference('comexlab_ncm_favorites',user.username)||'[]');
+ const recent=JSON.parse(readAccountPreference('comexlab_ncm_recent',user.username)||'[]');
+ if(Array.isArray(fav))setFavorites(fav.slice(0,70));if(Array.isArray(recent))setRecents(recent.slice(0,10));
+ }catch{}finally{setLoadedPrefs(true)}}).catch(()=>{});return()=>{active=false}},[]);
+ useEffect(()=>{if(loadedPrefs&&owner)try{localStorage.setItem(accountPreferenceKey('comexlab_ncm_favorites',owner),JSON.stringify(favorites));}catch{}},[favorites,loadedPrefs,owner]);
+ useEffect(()=>{if(loadedPrefs&&owner)try{localStorage.setItem(accountPreferenceKey('comexlab_ncm_recent',owner),JSON.stringify(recents));}catch{}},[recents,loadedPrefs,owner]);
  useEffect(()=>{const t=setTimeout(()=>setDebounced(q.trim()),350);return()=>clearTimeout(t)},[q]);
  useEffect(()=>{
   let stopped=false;
   const controller=new AbortController();
   setChaptersBusy(true);
-  fetch('/api/ncm?mode=chapters',{signal:controller.signal}).then(async response=>{
+  accountFetch('/api/ncm?mode=chapters',{signal:controller.signal}).then(async response=>{
    const json:ApiResponse=await response.json();
    if(!response.ok||!json.ok)throw Error(json.message||'Tabela indisponível');
    if(!stopped){setChapters(json.chapters||[]);setSource(json.source||'');setComplete(Boolean(json.complete));setUpdatedAt(json.updatedAt||null);}
@@ -75,7 +75,7 @@ export default function Ncm(){
   if(chapter)p.set('chapter',chapter);
   if(debounced)p.set('q',[debounced,/^\d[\d.\s-]*$/.test(debounced)?'':material.trim()].filter(Boolean).join(' '));
   setBusy(true);setError('');
-  fetch('/api/ncm?'+p.toString(),{signal:controller.signal}).then(async response=>{
+  accountFetch('/api/ncm?'+p.toString(),{signal:controller.signal}).then(async response=>{
    const data:ApiResponse=await response.json();
    if(!response.ok||!data.ok)throw Error(data.message||'Não foi possível consultar o NCM');
    if(!stopped){if(data.consultedAt)setConsultations(old=>({...old,...Object.fromEntries((data.results||[]).map(row=>[row.code,data.consultedAt!]))}));setItems(data.results||[]);setCount(data.total||0);setSource(data.source||'');setComplete(Boolean(data.complete));setUpdatedAt(data.updatedAt||null);}

@@ -1,9 +1,10 @@
+import {selectedSession} from '../../../../lib/account-session';
 import {NextRequest,NextResponse} from 'next/server';
 import {verifiedAccount,noStore} from '../../../../lib/admin-auth';
 import {EXCHANGE_CURRENCIES,parseExchangeSeries} from '../../../../lib/news-indicators';
 export const runtime='nodejs';
 export async function GET(req:NextRequest){
- if(!await verifiedAccount(req.cookies.get('comexlab_session')?.value))return NextResponse.json({error:'Acesse sua conta.'},{status:401,headers:noStore});
+ if(!await verifiedAccount(selectedSession(req)))return NextResponse.json({error:'Acesse sua conta.'},{status:401,headers:noStore});
  const currency=req.nextUrl.searchParams.get('currency')||'USD';
  if(currency!=='USD'&&currency!=='EUR')return NextResponse.json({error:'Moeda inválida.'},{status:400,headers:noStore});
  const config=EXCHANGE_CURRENCIES[currency];

@@ -1,4 +1,5 @@
 'use client';
+import {accountFetch} from '../../lib/account-fetch';
 import {useEffect,useState,type FormEvent} from 'react';
 import Link from 'next/link';
 import {CheckCircle2,Copy,KeyRound,Mail,ShieldCheck} from 'lucide-react';
@@ -7,13 +8,13 @@ export default function RecoveryPage(){
  const [email,setEmail]=useState('');const [sent,setSent]=useState(false);
  const [identity,setIdentity]=useState('');const [code,setCode]=useState('');const [password,setPassword]=useState('');const [repeat,setRepeat]=useState('');
  const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [newCode,setNewCode]=useState('');
- useEffect(()=>{fetch('/api/email-recovery',{cache:'no-store'}).then(r=>r.json()).then(d=>{setEnabled(d.emailRecoveryEnabled===true);if(!d.emailRecoveryEnabled)setMethod('code')}).catch(()=>{setEnabled(false);setMethod('code')})},[]);
+ useEffect(()=>{accountFetch('/api/email-recovery',{cache:'no-store'}).then(r=>r.json()).then(d=>{setEnabled(d.emailRecoveryEnabled===true);if(!d.emailRecoveryEnabled)setMethod('code')}).catch(()=>{setEnabled(false);setMethod('code')})},[]);
  async function requestEmail(e:FormEvent){e.preventDefault();setError('');setBusy(true);try{
-  const r=await fetch('/api/email-recovery',{method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store',body:JSON.stringify({mode:'request',email})});
+  const r=await accountFetch('/api/email-recovery',{method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store',body:JSON.stringify({mode:'request',email})});
   const d=await r.json();if(!r.ok)throw Error(d.error||'Não foi possível processar sua solicitação.');setSent(true);
  }catch(err){setError(err instanceof Error?err.message:'Falha ao solicitar recuperação.')}finally{setBusy(false)}}
  async function submitCode(e:FormEvent){e.preventDefault();setError('');if(password!==repeat){setError('As senhas não coincidem.');return;}setBusy(true);
-  try{const res=await fetch('/api/recovery',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identity,code,password})});const data=await res.json();if(!res.ok)throw Error(data.error||'Falha na redefinição.');setNewCode(String(data.recoveryCode));setPassword('');setRepeat('');setCode('');}
+  try{const res=await accountFetch('/api/recovery',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identity,code,password})});const data=await res.json();if(!res.ok)throw Error(data.error||'Falha na redefinição.');setNewCode(String(data.recoveryCode));setPassword('');setRepeat('');setCode('');}
   catch(err){setError(err instanceof Error?err.message:'Erro inesperado.')}finally{setBusy(false)}
  }
  return <div className="security-standalone"><main className="security-card"><span className="auth-eyebrow"><ShieldCheck size={16}/> COMEXHUB · RECUPERAÇÃO</span>

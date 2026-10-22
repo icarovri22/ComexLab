@@ -1,10 +1,10 @@
+import {selectedSession} from '../../../lib/account-session';
 import {NextRequest,NextResponse} from 'next/server';
 import {verifiedAccount,queryDB,noStore} from '../../../lib/admin-auth';
 import {isSimulationReport} from '../../../lib/simulation-storage';
-import {cookieName} from '../../../lib/security';
 export const runtime='nodejs';
 const fail=(error:string,status:number)=>NextResponse.json({error},{status,headers:noStore});
-async function user(req:NextRequest){return verifiedAccount(req.cookies.get(cookieName)?.value)}
+async function user(req:NextRequest){return verifiedAccount(selectedSession(req))}
 function trusted(req:NextRequest){const origin=req.headers.get('origin');try{return !!origin&&new URL(origin).host===req.nextUrl.host}catch{return false}}
 export async function GET(req:NextRequest){
  const me=await user(req);if(!me)return fail('Sessão inválida.',401);

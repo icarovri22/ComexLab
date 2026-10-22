@@ -1,3 +1,4 @@
+import {selectedSession} from '../lib/account-session.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {isPublicAuthPage} from '../lib/auth-pages.ts';
@@ -14,7 +15,7 @@ test('API recusa relatório incompleto e vincula a exclusão ao dono da sessão'
  const {readFileSync}=await import('node:fs');const {createRequire}=await import('node:module');const require=createRequire(import.meta.url);const ts=require('typescript');
  const source=ts.transpileModule(readFileSync(new URL('../app/api/simulations/route.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
  const calls=[];const query=async(strings,...values)=>{calls.push({sql:strings.join('?'),values});return [{id:'42'}]};
- const mocks={'next/server':{NextResponse:{json:(body,options={})=>({status:options.status||200,body})}},'../../../lib/admin-auth':{verifiedAccount:async()=>({id:'test-owner'}),queryDB:()=>query,noStore:{}},'../../../lib/security':{cookieName:'session'},'../../../lib/simulation-storage':{isSimulationReport}};
+ const mocks={'../../../lib/account-session':{selectedSession},'next/server':{NextResponse:{json:(body,options={})=>({status:options.status||200,body})}},'../../../lib/admin-auth':{verifiedAccount:async()=>({id:'test-owner'}),queryDB:()=>query,noStore:{}},'../../../lib/security':{cookieName:'session'},'../../../lib/simulation-storage':{isSimulationReport}};
  const module={exports:{}};new Function('require','module','exports',source)(name=>mocks[name],module,module.exports);
  const req=(payload={})=>({headers:new Headers({origin:'https://unit.invalid'}),nextUrl:{host:'unit.invalid',searchParams:new URLSearchParams({id:'42'})},cookies:{get:()=>({value:'test-session'})},text:async()=>JSON.stringify(payload)});
  assert.equal((await module.exports.POST(req({generatedAt:'today',sections:[]}))).status,400);assert.equal(calls.length,0);
