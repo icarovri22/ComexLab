@@ -51,11 +51,11 @@ function browser(href,stored=new Map()){
  const context={window,sessionStorage:storage,crypto:webcrypto,fetch:async(input,init)=>{calls.push({input,init});return new Response('{}')}};
  return {...load('lib/account-fetch.ts',{'./account-session':session},context),calls,stored,window};
 }
-test('new-account link isolates a tab, survives reload and never sends its selector to another origin',async()=>{
- const first=browser('https://app.test/login');const second=browser('https://app.test/login?nova-conta=1&next=%2Fsimuladores');
+test('ordinary new tabs isolate accounts automatically, survive reload and never send selectors to another origin',async()=>{
+ const first=browser('https://app.test/login');const second=browser('https://app.test/login?next=%2Fsimuladores');
  await first.accountFetch('/api/auth');await second.accountFetch('/api/auth',{headers:{'Content-Type':'application/json'}});
- assert.equal(first.calls[0].init.headers.get(session.ACCOUNT_HEADER),null);
- const slot=second.calls[0].init.headers.get(session.ACCOUNT_HEADER);assert.ok(session.validAccountSlot(slot));assert.ok(!second.window.location.href.includes('nova-conta'));assert.ok(second.window.location.href.includes('next='));
+ const firstSlot=first.calls[0].init.headers.get(session.ACCOUNT_HEADER);assert.ok(session.validAccountSlot(firstSlot));
+ const slot=second.calls[0].init.headers.get(session.ACCOUNT_HEADER);assert.notEqual(slot,firstSlot);assert.ok(session.validAccountSlot(slot));assert.ok(!second.window.location.href.includes('nova-conta'));assert.ok(second.window.location.href.includes('next='));
  const reload=browser(second.window.location.href,second.stored);await reload.accountFetch('/api/simulations');assert.equal(reload.calls[0].init.headers.get(session.ACCOUNT_HEADER),slot);
  await second.accountFetch(new Request('https://app.test/api/auth',{headers:{Accept:'application/json'}}));assert.equal(second.calls[1].init.headers.get('Accept'),'application/json');
  await second.accountFetch('https://external.test/api/auth');assert.equal(second.calls[2].init,undefined);
@@ -68,11 +68,16 @@ test('middleware accepts the selected signed cookie and rejects a missing slot d
  const emptySession={headers:new Headers(),cookies:{get:()=>undefined,getAll:()=>[]}};
  assert.equal((await auth.GET(emptySession)).body.loggedIn,false);
 });
-test('study and NCM preferences are scoped to the account; new accounts cannot inherit legacy browser data',()=>{
+test('study and NCM preferences are scoped to each account without inheriting unscoped browser data',()=>{
  const values=new Map([['progress','["fundamentos"]']]);const localStorage={getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value),removeItem:key=>values.delete(key)};
  const original=load('lib/account-preferences.ts',{'./account-fetch':{tabAccount:()=>null}},{localStorage});
  const second=load('lib/account-preferences.ts',{'./account-fetch':{tabAccount:()=>B}},{localStorage});
- assert.equal(second.readAccountPreference('progress','bob'),null);assert.equal(original.readAccountPreference('progress','alice'),'["fundamentos"]');
- assert.equal(second.readAccountPreference('progress','bob'),null);assert.equal(values.get('progress'),undefined);
+ assert.equal(second.readAccountPreference('progress','bob'),null);assert.equal(original.readAccountPreference('progress','alice'),null);localStorage.setItem(original.accountPreferenceKey('progress','alice'),'["fundamentos"]');
+ assert.equal(second.readAccountPreference('progress','bob'),null);assert.equal(values.get('progress'),'["fundamentos"]');
  localStorage.setItem(second.accountPreferenceKey('progress','bob'),'["modais"]');assert.equal(original.readAccountPreference('progress','alice'),'["fundamentos"]');assert.equal(second.readAccountPreference('progress','bob'),'["modais"]');
+});
+
+test('invalid stored tab selectors are replaced automatically and old links remain compatible',async()=>{
+ const damaged=browser('https://app.test/login',new Map([['comexhub:account-tab','invalid']]));await damaged.accountFetch('/api/auth');assert.ok(session.validAccountSlot(damaged.calls[0].init.headers.get(session.ACCOUNT_HEADER)));
+ const old=browser('https://app.test/login?nova-conta=1');await old.accountFetch('/api/auth');assert.ok(session.validAccountSlot(old.calls[0].init.headers.get(session.ACCOUNT_HEADER)));assert.ok(!old.window.location.href.includes('nova-conta'));
 });

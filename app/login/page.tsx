@@ -105,7 +105,6 @@ export default function Login(){
             <p className="auth-description">Olá, <strong>{me.username}</strong>. Você já pode acessar os simuladores e os conteúdos de estudo.</p>
             <Link href={typeof window==='undefined'?'/':returnPath()} className="auth-action">Acessar a plataforma <ArrowRight size={18}/></Link>
             <Link className="auth-outline" href="/seguranca">Segurança da conta e recuperação</Link>
-            <a className="auth-outline" href="/login?nova-conta=1" target="_blank" rel="noopener noreferrer">Abrir outra conta em nova aba</a>
             <p className="auth-description">Cada aba mantém a conta escolhida. Sair aqui não encerra as outras contas.</p>
             <button type="button" className="auth-outline" onClick={logout} disabled={loading}><LogOut size={17}/> Sair da conta</button>
           </>:<>
