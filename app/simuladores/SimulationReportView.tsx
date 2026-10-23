@@ -1,10 +1,10 @@
 'use client';
 
-import {Printer,Download,RefreshCcw,AlertTriangle,CheckCircle2} from 'lucide-react';
+import {Printer,Download,RefreshCcw,AlertTriangle,CheckCircle2,Plus} from 'lucide-react';
 import {useState} from 'react';
 import type {SimulationReport} from '../../lib/simulation-report';
 
-export default function SimulationReportView({report,stale,onEdit,saving=false,editLabel='Atualizar relatório'}:{report:SimulationReport;stale:boolean;onEdit:()=>void;saving?:boolean;editLabel?:string}){
+export default function SimulationReportView({report,stale,onEdit,onNew,saving=false,editLabel='Atualizar relatório'}:{report:SimulationReport;stale:boolean;onEdit:()=>void;onNew?:()=>void;saving?:boolean;editLabel?:string}){
  const [generatingPdf,setGeneratingPdf]=useState(false);
  const [pdfError,setPdfError]=useState('');
  async function downloadPdf(){
@@ -24,6 +24,7 @@ export default function SimulationReportView({report,stale,onEdit,saving=false,e
   <div className="simulation-report-toolbar">
    <div><span className="eyebrow">RELATÓRIO GERADO</span><h2>Prévia do relatório</h2><p className="help">Confira os dados e escolha uma ação: imprimir ou baixar o PDF diretamente.</p></div>
    <div className="simulation-report-actions">
+    {onNew&&<button type="button" className="btn" onClick={onNew} disabled={saving||generatingPdf}><Plus size={17}/> Nova simulação</button>}
     <button type="button" className="btn secondary" onClick={onEdit} disabled={saving}><RefreshCcw size={17}/> {editLabel}</button>
     <button type="button" className="btn secondary" onClick={()=>window.print()} disabled={stale||generatingPdf} title={stale?'Atualize o relatório para refletir os novos dados':'Abrir a impressão do relatório'}><Printer size={17}/> Imprimir</button>
     <button type="button" className="btn" onClick={()=>void downloadPdf()} disabled={stale||generatingPdf} title={stale?'Atualize o relatório para refletir os novos dados':'Baixar o relatório em arquivo PDF'}><Download size={17}/> {generatingPdf?'Gerando PDF...':'Baixar PDF'}</button>

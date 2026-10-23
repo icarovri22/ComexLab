@@ -490,6 +490,25 @@ export default function Simuladores(){
     requestAnimationFrame(()=>{const section=document.getElementById('sim-step-content');section?.focus({preventScroll:true});document.getElementById('simulator-wizard-top')?.scrollIntoView({block:'start',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'})});
   }
 
+  function startNewSimulation(){
+    if(savingReport.current||!storageReady)return;
+    activeReport.current=null;
+    setReport(null);setChecked([]);
+    setOp('import');setOriginCode('');setDestinationCode('');
+    setProduct('');setNcm('');setQty('');setUnit('');setFx('');
+    setModal('Marítimo');setCombinedModes(['Marítimo','Rodoviário']);
+    setLoadingPort(null);setDischargePort(null);
+    setQuantityUnit('un');setQuantityOther('');setTerm('FCA');
+    setOrigin('');setLoading('');setFreight('');setInsurance('');
+    setLastMile('');setUnloading('');setFees('');
+    setDestDuty('');setVat('');setIi('');setIpi('');setPis('');setCofins('');setIcms('');
+    setStorageNotice('Nova simulação iniciada. Os relatórios anteriores continuam no histórico.');
+    const url=new URL(window.location.href);
+    for(const key of ['tipo','ncm','produto'])url.searchParams.delete(key);
+    window.history.replaceState(window.history.state,'',url.pathname+url.search+url.hash);
+    goToStep(0);
+  }
+
   function nextStep(){
     goToStep(step+1);
   }
@@ -631,6 +650,6 @@ export default function Simuladores(){
     {storageNotice&&<p className="help" role="status" aria-live="polite">{storageNotice}</p>}
     <details className="minimal-disclosure simulation-history-disclosure" id="simulation-history"><summary>Histórico de simulações ({history.length})</summary><SimulationHistory reports={history} enabled={Boolean(storageOwner)} onDelete={deleteSimulation}/></details>
   </div>
-    {step===steps.length-1&&report&&<SimulationReportView report={report.data} stale={report.signature!==currentSignature} onEdit={()=>goToStep(0)} saving={reportSaving}/>}
+    {step===steps.length-1&&report&&<SimulationReportView report={report.data} stale={report.signature!==currentSignature} onEdit={()=>goToStep(0)} onNew={startNewSimulation} saving={reportSaving}/>}
   </>;
 }
