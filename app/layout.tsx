@@ -10,6 +10,7 @@ import './theme.css';
 import './minimal.css';
 import './palettes.css';
 import './report-monochrome.css';
+import './welcome-tour.css';
 import type {Metadata} from 'next';
 import AppShell from '../components/AppShell';
 export const metadata:Metadata={title:'ComexHub | Comércio Exterior na prática',description:'Seu hub de aprendizados em comércio exterior: aprenda importação, exportação, Incoterms, NCM e custos logísticos com simuladores interativos.',applicationName:'ComexHub',robots:{index:true,follow:true},openGraph:{title:'ComexHub | Comércio Exterior na prática',description:'Seu hub de aprendizados em comércio exterior',url:'https://comexhub-app.vercel.app',type:'website'},appleWebApp:{title:'ComexHub',capable:true,statusBarStyle:'default'},icons:{icon:'/icon.png',shortcut:'/favicon.ico',apple:'/apple-icon.png'},manifest:'/manifest.webmanifest'};
