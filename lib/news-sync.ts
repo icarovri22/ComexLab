@@ -1,5 +1,5 @@
 import {queryDB} from './admin-auth';
-import {classifyNews,parseOfficialFeed,cleanArticleUrl} from './comex-news';
+import {classifyNews,parseOfficialFeed,cleanArticleUrl,isRelevantNews} from './comex-news';
 import {translatePendingNews} from './news-translation';
 
 const ALLOWED_FEEDS:Record<string,{url:string;allowedHosts:string[]}>= {
@@ -44,6 +44,7 @@ export async function synchronizeNews(){
     if(!items.length)throw Error('Nenhum item recente e válido no feed');
     for(const article of items){
      if(Date.now()>deadline-4000)break;
+     if(!isRelevantNews(article.title,article.description,slug))continue;
      const metadata=classifyNews(article.title,article.description,slug);
      const countries=metadata.countries.join(',');
      const inPortuguese=slug==='mdic';

@@ -51,6 +51,13 @@ export function classifyNews(title:string,description:string,sourceSlug:string){
  if(!countries.length)countries.push('GLOBAL');
  return {category,countries:countries.slice(0,12),impact:NEWS_IMPACT[category]};
 }
+/** The MDIC feed also contains domestic industry news and institutional pages. */
+export function isRelevantNews(title:string,description:string,sourceSlug:string){
+ if(sourceSlug!=='mdic')return true;
+ if(description.trim().length<18)return false;
+ const text=(title+' '+description).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+ return /\b(?:comercio exterior|comercio internacional|comercio global|export\w*|import\w*|aduan\w*|siscomex|duimp|mercosul|tarifa\w*|antidumping|balanca comercial|corrente de comercio|barreira comercial|defesa comercial|acordo comercial|acordos comerciais|mercado externo|mercados externos|investimento estrangeiro|logistica internacional|frete internacional|porto de embarque)\b/.test(text);
+}
 function decodeEntities(input:string){
  return input.replace(/&#x([\da-f]+);/gi,(_,hex:string)=>String.fromCodePoint(Math.min(parseInt(hex,16),0x10ffff)))
  .replace(/&#(\d+);/g,(_,n:string)=>String.fromCodePoint(Math.min(Number(n),0x10ffff)))
