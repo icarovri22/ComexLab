@@ -27,14 +27,14 @@ export default function WelcomeTour({owner,request}:{owner:string|null;request:n
  useEffect(()=>{if(owner&&request!==lastRequest.current){lastRequest.current=request;if(request>0)open()}},[owner,request,open]);
  useEffect(()=>{
   if(phase==='closed')return;
-  const frame=requestAnimationFrame(()=>dialog.current?.querySelector<HTMLButtonElement>('button:not([disabled])')?.focus());
+  const frame=requestAnimationFrame(()=>dialog.current?.focus());
   const handle=(event:KeyboardEvent)=>{
    if(event.key==='Escape'){event.preventDefault();close();return}
    if(event.key!=='Tab'||!dialog.current)return;
    const buttons=Array.from(dialog.current.querySelectorAll<HTMLButtonElement>('button:not([disabled])'));
    if(!buttons.length)return;
    const first=buttons[0],last=buttons[buttons.length-1];
-   if(event.shiftKey&&(document.activeElement===first||!dialog.current.contains(document.activeElement))){event.preventDefault();last.focus()}
+   if(event.shiftKey&&(document.activeElement===first||document.activeElement===dialog.current||!dialog.current.contains(document.activeElement))){event.preventDefault();last.focus()}
    else if(!event.shiftKey&&(document.activeElement===last||!dialog.current.contains(document.activeElement))){event.preventDefault();first.focus()}
   };
   document.addEventListener('keydown',handle);return()=>{cancelAnimationFrame(frame);document.removeEventListener('keydown',handle)};
@@ -60,7 +60,7 @@ export default function WelcomeTour({owner,request}:{owner:string|null;request:n
  return <div className="welcome-tour-layer">
   <div className="welcome-tour-blocker" aria-hidden="true"/>
   {phase==='welcome'||!hole?<div className="welcome-tour-shade" aria-hidden="true"/>:<div className="welcome-tour-highlight" style={hole} aria-hidden="true"/>}
-  <div ref={dialog} className={'welcome-tour-dialog'+(phase==='welcome'?' is-welcome':'')} style={phase==='tour'?position:undefined} role="dialog" aria-modal="true" aria-labelledby="welcome-tour-title" aria-describedby="welcome-tour-description">
+  <div ref={dialog} tabIndex={-1} className={'welcome-tour-dialog'+(phase==='welcome'?' is-welcome':'')} style={phase==='tour'?position:undefined} role="dialog" aria-modal="true" aria-labelledby="welcome-tour-title" aria-describedby="welcome-tour-description">
    {phase==='welcome'?<><span className="welcome-tour-count">BOAS-VINDAS</span><h2 id="welcome-tour-title">Vamos conhecer o app?</h2><p id="welcome-tour-description">Um passeio rápido para descobrir onde fica cada função.</p><div className="welcome-tour-actions"><button type="button" className="welcome-tour-skip" onClick={close}>Pular apresentação</button><button type="button" className="btn" onClick={()=>setPhase('tour')}>Conhecer o app</button></div></>:<>
     <span className="welcome-tour-count" aria-live="polite">{index+1} de {TOUR_STEPS.length}</span><h2 id="welcome-tour-title">{current.title}</h2><p id="welcome-tour-description">{current.description}</p>
     <div className="welcome-tour-actions"><button type="button" className="welcome-tour-skip" onClick={close}>Pular</button><div className="welcome-tour-navigation">{index>0&&<button type="button" className="btn secondary" onClick={()=>setIndex(i=>i-1)}>Voltar</button>}<button type="button" className="btn" onClick={()=>index===TOUR_STEPS.length-1?close():setIndex(i=>i+1)}>{index===TOUR_STEPS.length-1?'Concluir':'Próximo'}</button></div></div>
