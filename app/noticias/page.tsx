@@ -3,6 +3,9 @@ import {accountFetch} from '../../lib/account-fetch';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {newsMonth} from '../../lib/news-period';
 import NewsDashboard from '../../components/NewsDashboard';
+import EconomyOverview from '../../components/EconomyOverview';
+import MarketChart from '../../components/MarketChart';
+import './economy.css';
 import './news-upgrade.css';
 import {Newspaper,Globe2,Search,ExternalLink,RefreshCcw,CalendarDays,ShieldCheck,ArrowRight,TrendingUp} from 'lucide-react';
 import {COUNTRY_LABELS,NEWS_CATEGORIES,type NewsArticle} from '../../lib/comex-news';
@@ -10,7 +13,7 @@ import {COUNTRY_LABELS,NEWS_CATEGORIES,type NewsArticle} from '../../lib/comex-n
 const formatDate=(value:string|null)=>value?new Date(value).toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}):'Data não informada';
 export default function NewsPage(){
  const requestVersion=useRef(0);
- const [view,setView]=useState<'news'|'indicators'>('news');
+ const [view,setView]=useState<'overview'|'news'|'indicators'>('overview');
  const [monthKey,setMonthKey]=useState(()=>newsMonth().key);
  const [monthLabel,setMonthLabel]=useState(()=>newsMonth().label);
  useEffect(()=>{const check=()=>setMonthKey(newsMonth().key);const timer=setInterval(check,60_000);return()=>clearInterval(timer)},[]);
@@ -32,14 +35,15 @@ export default function NewsPage(){
  const syncDate=lastSync?.completed_at?new Date(lastSync.completed_at):null;
  const syncProblem=!syncDate||Date.now()-syncDate.getTime()>36*3600000||lastSync?.status==='error';
  return <div className="news-page">
-  <header className="page-heading"><span className="eyebrow">APRENDIZAGEM · COMEX NEWS</span><h1>Acompanhe o que importa.</h1><p className="page-lead">Notícias do mês e câmbio, cada um no seu espaço.</p></header><div className="minimal-tabs" role="group" aria-label="Conteúdo do Comex News"><button type="button" aria-pressed={view==='news'} onClick={()=>setView('news')}>Notícias</button><button type="button" aria-pressed={view==='indicators'} onClick={()=>setView('indicators')}>Câmbio e indicadores</button></div>
+  <header className="page-heading"><span className="eyebrow">APRENDIZAGEM · COMEX NEWS</span><h1>Acompanhe o que importa.</h1><p className="page-lead">Economia brasileira e mundial, mercados e comércio exterior.</p></header><div className="minimal-tabs" role="group" aria-label="Conteúdo do Comex News"><button type="button" aria-pressed={view==='overview'} onClick={()=>setView('overview')}>Panorama</button><button type="button" aria-pressed={view==='news'} onClick={()=>setView('news')}>Notícias</button><button type="button" aria-pressed={view==='indicators'} onClick={()=>setView('indicators')}>Bolsa e câmbio</button></div>
   <section className="news-update-strip" aria-label="Situação da atualização"><div><strong>Atualização automática</strong><span>Consulta diária e nova verificação ao acessar, quando necessário</span></div><div><strong>{syncProblem?'Verificação das fontes pendente':lastSync?.status==='partial'?'Última consulta com falha em parte das fontes':'Fontes consultadas'}</strong><span>{syncDate?syncDate.toLocaleString('pt-BR',{timeZone:'America/Fortaleza',dateStyle:'short',timeStyle:'short'}):'Aguardando a primeira sincronização'} · Fortaleza</span></div></section>
+  {view==='overview'&&<><EconomyOverview/><MarketChart/></>}
   <div hidden={view!=='news'}>
   <section className="news-filter-panel" aria-label="Pesquisar notícias">
    <form onSubmit={e=>{e.preventDefault();setSearch(term.trim().slice(0,80))}} className="news-search-form"><label className="field"><span className="label">Pesquisar por assunto</span><div className="news-search-input"><Search size={18}/><input className="input" placeholder="Ex.: tarifas, exportações, portos..." maxLength={80} value={term} onChange={e=>setTerm(e.target.value)}/></div></label><button className="btn" type="submit">Buscar</button></form>
    <details className="minimal-disclosure news-filters-disclosure" open={country!=='all'||category!=='all'}><summary>Filtrar por país ou assunto{country!=='all'||category!=='all'?' · filtros ativos':''}</summary><div className="news-filters"><div className="field"><span className="label">Mês de publicação</span><strong className="news-current-month">{monthLabel}</strong></div><label className="field"><span className="label">País ou região</span><select className="select" value={country} onChange={e=>setCountry(e.target.value)}><option value="all">Todos os países</option>{Object.entries(COUNTRY_LABELS).sort((a,b)=>a[1].localeCompare(b[1],'pt-BR')).map(([code,name])=><option key={code} value={code}>{name}</option>)}</select></label><label className="field"><span className="label">Categoria</span><select className="select" value={category} onChange={e=>setCategory(e.target.value)}><option value="all">Todos os assuntos</option>{Object.entries(NEWS_CATEGORIES).map(([code,name])=><option value={code} key={code}>{name}</option>)}</select></label><button className="btn secondary news-refresh" type="button" disabled={loading} onClick={()=>void load()}><RefreshCcw size={15}/> Recarregar notícias</button></div></details>
   </section>
-  <div className="news-section-heading"><div><h2>Notícias do comércio internacional</h2><p>{loading?'Carregando notícias oficiais...':`${items.length} ${items.length===1?'publicação encontrada':'publicações encontradas'} · ${monthLabel}${items.length===80?' · exibindo as 80 mais recentes':''}`}</p></div>{lastSync?.completed_at&&<small>Última consulta de fontes: {new Date(lastSync.completed_at).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</small>}</div>
+  <div className="news-section-heading"><div><h2>Notícias da economia e do comércio internacional</h2><p>{loading?'Carregando notícias oficiais...':`${items.length} ${items.length===1?'publicação encontrada':'publicações encontradas'} · ${monthLabel}${items.length===80?' · exibindo as 80 mais recentes':''}`}</p></div>{lastSync?.completed_at&&<small>Última consulta de fontes: {new Date(lastSync.completed_at).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</small>}</div>
   {error&&<div className="alert" role="alert">{error} <button type="button" onClick={()=>void load()} className="btn secondary">Tentar novamente</button></div>}
   {!error&&loading&&<div className="panel" role="status">Consultando a base de notícias...</div>}
   {!error&&!loading&&!items.length&&<section className="news-empty"><Newspaper size={38}/><h2>Nenhuma notícia encontrada</h2><p>Não há publicações disponíveis para esta seleção. Limpe os filtros para conferir todas as notícias do mês. A lista muda automaticamente no início de cada mês. As fontes podem não publicar novidades todos os dias.</p><button className="btn secondary" type="button" onClick={()=>{setCategory('all');setCountry('all');setSearch('');setTerm('')}}>Limpar filtros</button></section>}
@@ -51,7 +55,7 @@ export default function NewsPage(){
    <div className="news-card-footer"><div className="news-card-source"><strong><ShieldCheck size={14}/>{item.source_name}</strong><span><CalendarDays size={13}/>{formatDate(item.published_at)}</span></div><a href={item.source_url} target="_blank" rel="noopener noreferrer" className="news-source-link">Ler na fonte <ExternalLink size={15}/></a></div>
   </article>)}</div>}
   </div>
-  {view==='indicators'&&<NewsDashboard items={loading||error?[]:items} refreshKey={lastSync?.completed_at||''}/>}
+  {view==='indicators'&&<><MarketChart/><NewsDashboard items={loading||error?[]:items} refreshKey={lastSync?.completed_at||''}/></>}
   <details className="news-official-sources minimal-disclosure"><summary>Fontes oficiais consultadas</summary><p>Publicações consultadas automaticamente. O botão “Recarregar notícias” atualiza a lista já coletada.</p><div>{sources.map(source=><article key={source.slug}><strong>{source.name}</strong><span>{source.last_error?'Última tentativa indisponível':source.last_success_at?'Consulta disponível':'Aguardando consulta'}</span><a href={source.website_url} target="_blank" rel="noopener noreferrer">Abrir portal oficial <ExternalLink size={13}/></a></article>)}</div></details>
   <section className="news-disclaimer"><ShieldCheck size={20}/><div><strong>Informação com responsabilidade</strong><p>Os títulos e resumos são exibidos em português. Traduções automáticas podem conter imprecisões: confirme os detalhes na fonte original. Os possíveis impactos são explicações gerais e não confirmam que uma medida já esteja em vigor. Antes de negociar, classificar produtos ou calcular tributos, consulte as regras oficiais atualizadas.</p></div><ArrowRight size={18}/></section>
  </div>

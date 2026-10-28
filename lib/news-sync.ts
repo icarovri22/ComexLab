@@ -5,6 +5,8 @@ import {translatePendingNews} from './news-translation';
 const ALLOWED_FEEDS:Record<string,{url:string;allowedHosts:string[]}>= {
  mdic:{url:'https://www.gov.br/mdic/pt-br/assuntos/noticias/RSS',allowedHosts:['gov.br']},
  wto:{url:'https://www.wto.org/library/rss/latest_news_e.xml',allowedHosts:['wto.org']},
+ ebc:{url:'https://agenciabrasil.ebc.com.br/rss/economia/feed.xml',allowedHosts:['ebc.com.br']},
+ ecb:{url:'https://www.ecb.europa.eu/rss/press.html',allowedHosts:['ecb.europa.eu']},
  ec:{url:'https://policy.trade.ec.europa.eu/node/2/rss_en',allowedHosts:['europa.eu']}
 };
 export async function synchronizeNews(){
@@ -19,6 +21,7 @@ export async function synchronizeNews(){
  try{
   const run=await sql`INSERT INTO comexlab_news_sync_runs(status) VALUES('running') RETURNING id::text`;
   runId=String(run[0].id);
+  await sql`INSERT INTO comexlab_news_sources(slug,name,feed_url,website_url) VALUES ('ebc','Agência Brasil — Economia','https://agenciabrasil.ebc.com.br/rss/economia/feed.xml','https://agenciabrasil.ebc.com.br/economia'),('ecb','Banco Central Europeu — Economia mundial','https://www.ecb.europa.eu/rss/press.html','https://www.ecb.europa.eu/press/html/index.en.html') ON CONFLICT(slug) DO NOTHING`;
   const sources=await sql`SELECT slug,name FROM comexlab_news_sources WHERE is_enabled=true ORDER BY slug`;
   for(const source of sources){
    const slug=String(source.slug);const safe=ALLOWED_FEEDS[slug];if(!safe)continue;
@@ -47,7 +50,7 @@ export async function synchronizeNews(){
      if(!isRelevantNews(article.title,article.description,slug))continue;
      const metadata=classifyNews(article.title,article.description,slug);
      const countries=metadata.countries.join(',');
-     const inPortuguese=slug==='mdic';
+     const inPortuguese=slug==='mdic'||slug==='ebc';
      const inserted=await sql`INSERT INTO comexlab_news(source_slug,source_name,source_url,title,summary,impact,category,countries,published_at,status,title_pt,summary_pt,translation_status,translation_provider,translated_at)
        VALUES(${slug},${source.name},${article.url},${article.title},${article.description},${metadata.impact},${metadata.category},string_to_array(${countries},','),${article.publishedAt},'published',${inPortuguese?article.title:null},${inPortuguese?article.description:null},${inPortuguese?'ready':'pending'},${inPortuguese?'original-pt':null},${inPortuguese?new Date().toISOString():null})
        ON CONFLICT(source_url) DO NOTHING RETURNING id`;

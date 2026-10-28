@@ -19,12 +19,13 @@ export async function GET(req:NextRequest){
   // Refresh on demand when the scheduled collection is older than six hours.
   const recent=await db`SELECT completed_at FROM comexlab_news_sync_runs WHERE completed_at IS NOT NULL ORDER BY id DESC LIMIT 1`;
   const last=recent[0]?.completed_at?new Date(String(recent[0].completed_at)).getTime():0;
-  if(!Number.isFinite(last)||Date.now()-last>6*3600000){
+  const newSources=await db`SELECT slug FROM comexlab_news_sources WHERE slug='ebc'`;
+  if(!newSources.length||!Number.isFinite(last)||Date.now()-last>6*3600000){
    try{await synchronizeNews()}catch(error){console.error('News refresh unavailable',error instanceof Error?error.message:'unknown')}
   }
   const [news,lastSync,sources]=await Promise.all([
    db`SELECT id::text,title_pt AS title,summary_pt AS summary,title AS original_title,summary AS original_summary,source_slug,impact,category,countries,source_name,source_url,published_at,featured,translation_provider FROM comexlab_news
-    WHERE status='published' AND source_slug IN ('mdic','ec','wto') AND published_at>=${month.start}::timestamptz AND published_at<${month.end}::timestamptz AND published_at<=NOW() AND translation_status='ready' AND title_pt IS NOT NULL AND (${category}='all' OR category=${category})
+    WHERE status='published' AND source_slug IN ('mdic','ec','wto','ebc','ecb') AND published_at>=${month.start}::timestamptz AND published_at<${month.end}::timestamptz AND published_at<=NOW() AND translation_status='ready' AND title_pt IS NOT NULL AND (${category}='all' OR category=${category})
       AND (${country}='all' OR ${country}=ANY(countries))
       AND (${term}='' OR title_pt ILIKE ${'%'+term+'%'} OR summary_pt ILIKE ${'%'+term+'%'})
     ORDER BY published_at DESC,featured DESC NULLS LAST,id DESC LIMIT 300`,

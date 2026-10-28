@@ -43,11 +43,11 @@ export const NEWS_IMPACT:Record<NewsCategory,string>={
 };
 export function classifyNews(title:string,description:string,sourceSlug:string){
  const text=(title+' '+description).slice(0,1600);
- const category=categoryRules.find(([,rule])=>rule.test(text))?.[0]||'geral';
+ const category=sourceSlug==='ebc'||sourceSlug==='ecb'?'economia':categoryRules.find(([,rule])=>rule.test(text))?.[0]||'geral';
  const countries=countryExpressions.filter(([,rule])=>rule.test(text)).map(([code])=>code);
  // Identify the issuing jurisdiction, without pretending that the country is involved in every event.
- if(sourceSlug==='mdic'&&!countries.includes('BR'))countries.unshift('BR');
- if(sourceSlug==='ec'&&!countries.includes('EU'))countries.unshift('EU');
+ if((sourceSlug==='mdic'||sourceSlug==='ebc')&&!countries.includes('BR'))countries.unshift('BR');
+ if((sourceSlug==='ec'||sourceSlug==='ecb')&&!countries.includes('EU'))countries.unshift('EU');
  if(!countries.length)countries.push('GLOBAL');
  return {category,countries:countries.slice(0,12),impact:NEWS_IMPACT[category]};
 }
