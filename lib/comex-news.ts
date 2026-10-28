@@ -66,7 +66,10 @@ function decodeEntities(input:string){
  } as Record<string,string>)[value]||value);
 }
 export function plainText(html:string,max=700){
- return decodeEntities(html.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,'$1').replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,'').replace(/<[^>]+>/g,' ').replace(/[\u0000-\u001f]+/g,' ')).replace(/\s+/g,' ').trim().slice(0,max);
+ let text=html.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,'$1');
+ // RSS may escape HTML once or more. Decode before stripping, never after.
+ for(let layer=0;layer<5;layer++){const decoded=decodeEntities(text);if(decoded===text)break;text=decoded;}
+ return text.replace(/<script\b[^>]*>[\s\S]*?(?:<\/script>|$)/gi,'').replace(/<style\b[^>]*>[\s\S]*?(?:<\/style>|$)/gi,'').replace(/<!--[\s\S]*?(?:-->|$)/g,'').replace(/<[^>]+>/g,' ').replace(/<\/?[a-z][^>]*$/gi,'').replace(/[\u0000-\u001f]+/g,' ').replace(/\s+/g,' ').trim().slice(0,max);
 }
 const firstTag=(part:string,tag:string)=>new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`,'i').exec(part)?.[1]||'';
 export type FeedItem={title:string;description:string;url:string;publishedAt:string};

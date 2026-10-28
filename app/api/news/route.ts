@@ -2,7 +2,7 @@ import {selectedSession} from '../../../lib/account-session';
 import {NextRequest,NextResponse} from 'next/server';
 import {queryDB,noStore,verifiedAccount} from '../../../lib/admin-auth';
 import {newsMonth} from '../../../lib/news-period';
-import {NEWS_CATEGORIES,COUNTRY_LABELS,isRelevantNews} from '../../../lib/comex-news';
+import {NEWS_CATEGORIES,COUNTRY_LABELS,isRelevantNews,plainText} from '../../../lib/comex-news';
 import {synchronizeNews} from '../../../lib/news-sync';
 export const runtime='nodejs';
 export const maxDuration=60;
@@ -32,7 +32,7 @@ export async function GET(req:NextRequest){
    db`SELECT completed_at,status FROM comexlab_news_sync_runs WHERE completed_at IS NOT NULL ORDER BY id DESC LIMIT 1`,
    db`SELECT slug,name,website_url,last_success_at,last_checked_at,last_error FROM comexlab_news_sources WHERE is_enabled=true ORDER BY slug`
   ]);
-  const relevant=news.filter(row=>isRelevantNews(String(row.original_title||''),String(row.original_summary||''),String(row.source_slug||''))).slice(0,80).map(({original_title,original_summary,source_slug,...row})=>row);
+  const relevant=news.filter(row=>isRelevantNews(String(row.original_title||''),String(row.original_summary||''),String(row.source_slug||''))).slice(0,80).map(({original_title,original_summary,source_slug,...row})=>({...row,title:plainText(String(row.title||''),240),summary:plainText(String(row.summary||''),700),impact:plainText(String(row.impact||''),1000)}));
   return NextResponse.json({news:relevant,lastSync:lastSync[0]||null,sources,month,limit:80},{headers:noStore});
  }catch(e){console.error('Public news read error',e instanceof Error?e.message:'unknown');return NextResponse.json({error:'Notícias temporariamente indisponíveis.'},{status:503,headers:noStore})}
 }
