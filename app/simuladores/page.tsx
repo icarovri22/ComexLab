@@ -587,7 +587,7 @@ export default function Simuladores(){
     </section>;
 
     return <section className="panel wizard-panel"><span className="eyebrow">ETAPA 06</span><h2>Resultado final e relatório</h2>
-      <p className="page-lead">Confira o resumo da operação e gere um relatório com rota, mercadoria, Incoterm, custos, impostos estimados e checklist. Depois, use “Imprimir / Salvar em PDF” para imprimir ou salvar o documento com o layout da prévia.</p>
+      <p className="page-lead">Confira o resumo da operação e gere um relatório com rota, mercadoria, Incoterm, custos, impostos estimados e checklist. Depois, escolha “Imprimir” ou “Baixar PDF”. O arquivo usa o layout da prévia.</p>
       <div className="grid-2 wizard-final-grid">
         <div className="info"><strong>Rota e configuração</strong><p style={{margin:'8px 0 0'}}>{originMarket?.name??originCode} ({originCode}) → {destinationMarket?.name??destinationCode} ({destinationCode})<br/>{modeLabel} · {incoterm.name}<br/>Mercadoria: {product}</p></div>
         <div className="info"><strong>Situação da simulação</strong><p style={{margin:'8px 0 0'}}>Tributos: {taxCompleted?'completos':'pendentes'}<br/>Checklist: {checked.length} de {checklist.length} itens marcados<br/>Rota internacional: {international?'sim':'não'}</p></div>

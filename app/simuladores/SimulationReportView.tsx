@@ -1,18 +1,35 @@
 'use client';
 
-import {Printer,RefreshCcw,AlertTriangle,CheckCircle2,Plus} from 'lucide-react';
+import {Printer,Download,RefreshCcw,AlertTriangle,CheckCircle2,Plus} from 'lucide-react';
+import {useState} from 'react';
 import type {SimulationReport} from '../../lib/simulation-report';
 
 export default function SimulationReportView({report,stale,onEdit,onNew,saving=false,editLabel='Atualizar relatório'}:{report:SimulationReport;stale:boolean;onEdit:()=>void;onNew?:()=>void;saving?:boolean;editLabel?:string}){
+ const [generatingPdf,setGeneratingPdf]=useState(false);
+ const [pdfError,setPdfError]=useState('');
+ async function downloadPdf(){
+  if(stale||saving||generatingPdf)return;
+  setGeneratingPdf(true);setPdfError('');
+  try{
+   const element=document.getElementById('simulation-printable');
+   if(!element)throw Error('Prévia não encontrada.');
+   const {createPreviewPdf}=await import('../../lib/report-preview-pdf');
+   const pdf=await createPreviewPdf(element);
+   pdf.save(`ComexHub-relatorio-simulacao-${new Date().toISOString().slice(0,10)}.pdf`);
+  }catch{setPdfError('Não foi possível baixar o PDF. Tente novamente ou use Imprimir.');}
+  finally{setGeneratingPdf(false)}
+ }
  return <section id="simulation-report-section" className="simulation-report-section" aria-label="Relatório da simulação" tabIndex={-1}>
   <div className="simulation-report-toolbar">
-   <div><span className="eyebrow">RELATÓRIO GERADO</span><h2>Prévia do relatório</h2><p className="help">O PDF usa o mesmo layout desta prévia. Clique em “Imprimir / Salvar em PDF” e escolha “Salvar como PDF” na janela do navegador.</p></div>
+   <div><span className="eyebrow">RELATÓRIO GERADO</span><h2>Prévia do relatório</h2><p className="help">Confira o relatório. Imprima ou baixe o PDF com o layout desta prévia.</p></div>
    <div className="simulation-report-actions">
-    {onNew&&<button type="button" className="btn" onClick={onNew} disabled={saving}><Plus size={17}/> Nova simulação</button>}
-    <button type="button" className="btn secondary" onClick={onEdit} disabled={saving}><RefreshCcw size={17}/> {editLabel}</button>
-    <button type="button" className="btn" onClick={()=>window.print()} disabled={stale||saving} title={stale?'Atualize o relatório para refletir os novos dados':'Imprimir ou salvar a prévia como PDF'}><Printer size={17}/> Imprimir / Salvar em PDF</button>
+    {onNew&&<button type="button" className="btn" onClick={onNew} disabled={saving||generatingPdf}><Plus size={17}/> Nova simulação</button>}
+    <button type="button" className="btn secondary" onClick={onEdit} disabled={saving||generatingPdf}><RefreshCcw size={17}/> {editLabel}</button>
+    <button type="button" className="btn" onClick={()=>window.print()} disabled={stale||saving||generatingPdf} title={stale?'Atualize o relatório para refletir os novos dados':'Abrir impressão'}><Printer size={17}/> Imprimir</button>
+    <button type="button" className="btn" onClick={()=>void downloadPdf()} disabled={stale||saving||generatingPdf}><Download size={17}/> {generatingPdf?'Gerando PDF…':'Baixar PDF'}</button>
    </div>
   </div>
+  {pdfError&&<div className="alert simulation-report-stale" role="alert">{pdfError}</div>}
   {stale&&<div className="alert simulation-report-stale" role="status"><AlertTriangle size={18}/> A simulação foi modificada depois da geração. Selecione <strong>Atualizar relatório</strong> para revisar os dados e, na etapa Resultado, salve as alterações antes de imprimir ou baixar.</div>}
   <article className="simulation-printable" id="simulation-printable">
    <header className="simulation-report-header"><div><span className="simulation-report-brand">Comex<span>Hub</span></span><p>Relatório educacional de comércio exterior</p></div><div className="simulation-report-header-right"><strong>RELATÓRIO DIDÁTICO</strong><span>{report.generatedAt} · horário de Fortaleza</span></div></header>
