@@ -86,7 +86,7 @@ export default function Login(){
           <div><span><ArrowRight size={19}/></span><div><strong>Simuladores completos</strong><small>Importação, exportação e Incoterms® 2020.</small></div></div>
           <div><span><ShieldCheck size={19}/></span><div><strong>Acesso pessoal</strong><small>Seus dados e sua senha ficam protegidos.</small></div></div>
         </div>
-        <p className="auth-aside-foot">Projeto desenvolvido por <strong>Hanna Roncel e Ícaro Pinheiro</strong>.</p>
+        <p className="auth-aside-foot">Projeto desenvolvido por <strong>Hanna Roncel, Ícaro Pinheiro e Mirelly Lopes</strong>.</p>
       </section>
       <section className="auth-right" aria-label="Acesso à conta">
         <div className="auth-panel">
@@ -134,6 +134,6 @@ export default function Login(){
         </div>
       </section>
     </main>
-    <footer className="auth-footer">ComexHub · Ferramenta educacional. <span>Desenvolvido por <strong>Hanna Roncel e Ícaro Pinheiro</strong>.</span><span>Contato: <a href="mailto:comexhub.contato@gmail.com" style={{overflowWrap:'anywhere'}}>comexhub.contato@gmail.com</a></span></footer>
+    <footer className="auth-footer">ComexHub · Ferramenta educacional. <span>Desenvolvido por <strong>Hanna Roncel, Ícaro Pinheiro e Mirelly Lopes</strong>.</span><span>Contato: <a href="mailto:comexhub.contato@gmail.com" style={{overflowWrap:'anywhere'}}>comexhub.contato@gmail.com</a></span></footer>
   </div>;
 }
