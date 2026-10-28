@@ -10,7 +10,7 @@ export async function GET(req:NextRequest){
  const indicatorsPromise=Promise.all(ECONOMIC_SERIES.map(async config=>{
   const sourceUrl=`https://www3.bcb.gov.br/sgspub/consultarmetadados/consultarMetadadosSeries.do?method=consultarMetadadosSeriesInternet&hdOidSerieSelecionada=${config.series}`;
   try{
-   const response=await fetch(`https://api.bcb.gov.br/dados/serie/bcdata.sgs.${config.series}/dados/ultimos/30?formato=json`,{next:{revalidate:3600},signal:AbortSignal.timeout(8000)});
+   const response=await fetch(`https://api.bcb.gov.br/dados/serie/bcdata.sgs.${config.series}/dados/ultimos/20?formato=json`,{next:{revalidate:3600},signal:AbortSignal.timeout(8000)});
    if(!response.ok)throw Error('Fonte indisponível');
    const points=parseEconomicSeries(await response.json(),now),latest=points.at(-1);
    if(!latest)throw Error('Sem observações válidas');
