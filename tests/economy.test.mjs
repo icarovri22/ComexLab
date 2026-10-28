@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseEconomicSeries,parseGdpSeries} from '../lib/economy.ts';
+import {parseEconomicSeries,parseGdpSeries,parseGdpValues} from '../lib/economy.ts';
 import {readFile} from 'node:fs/promises';
 test('consulta do Panorama respeita o limite de 20 observações do SGS',async()=>{
  const source=await readFile(new URL('../app/api/news/economy/route.ts',import.meta.url),'utf8');
@@ -15,4 +15,9 @@ test('PIB seleciona Brasil, variável e setor corretos; ignora cabeçalhos e dad
  const row={D1C:'1',D2C:'6561',D4C:'90707',MC:'2',D3C:'202602',V:'2.0'};
  const values=parseGdpSeries([{V:'Valor'},row,{...row,D3C:'202601',V:'-0,5'},{...row,D3C:'202504',V:'0'},{...row,D3C:'202604'},{...row,D4C:'999'},{...row,D3C:'202503',V:'..'},{...row,D3C:'202500'}],new Date('2026-10-28T00:00:00Z'));
  assert.deepEqual(values.map(x=>[x.value,x.periodLabel]),[[0,'4º trimestre de 2025'],[-.5,'1º trimestre de 2026'],[2,'2º trimestre de 2026']]);
+});
+test('PIB monetário converte milhões em reais e rejeita unidade ou variável diferentes',()=>{
+ const row={D1C:'1',D2C:'585',D4C:'90707',MC:'1550',D3C:'202602',V:'3425728'};
+ const result=parseGdpValues([row,{...row,MC:'2'},{...row,D2C:'6561'},{...row,D3C:'202601',V:'-1'}],new Date('2026-10-28T00:00:00Z'));
+ assert.equal(result.length,1);assert.equal(result[0].value,3_425_728_000_000);assert.equal(result[0].periodLabel,'2º trimestre de 2026');
 });

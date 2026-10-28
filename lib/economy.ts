@@ -1,17 +1,19 @@
 export type EconomicPoint={date:string;value:number};
-export function parseGdpSeries(input:unknown,now=new Date()){
+function parseSidraGdp(input:unknown,variable:string,unit:string,multiplier:number,now:Date){
  if(!Array.isArray(input))throw Error('Resposta do SIDRA não reconhecida');
  const points=new Map<string,{date:string;value:number;periodLabel:string}>();
  for(const row of input){
-  if(!row||typeof row!=='object'||row.D1C!=='1'||row.D2C!=='6561'||row.D4C!=='90707'||row.MC!=='2')continue;
+  if(!row||typeof row!=='object'||row.D1C!=='1'||row.D2C!==variable||row.D4C!=='90707'||row.MC!==unit)continue;
   const match=/^(\d{4})0([1-4])$/.exec(String(row.D3C)),raw=String(row.V??'').trim();
   if(!match||!raw||!/^-?\d+(?:[.,]\d+)?$/.test(raw))continue;
-  const quarter=Number(match[2]),date=`${match[1]}-${String(quarter*3).padStart(2,'0')}-01`,value=Number(raw.replace(',','.'));
+  const quarter=Number(match[2]),date=`${match[1]}-${String(quarter*3).padStart(2,'0')}-01`,value=Number(raw.replace(',','.'))*multiplier;
   if(!Number.isFinite(value)||date>now.toISOString().slice(0,10))continue;
   points.set(date,{date,value,periodLabel:`${quarter}º trimestre de ${match[1]}`});
  }
  return [...points.values()].sort((a,b)=>a.date.localeCompare(b.date));
 }
+export const parseGdpSeries=(input:unknown,now=new Date())=>parseSidraGdp(input,'6561','2',1,now);
+export const parseGdpValues=(input:unknown,now=new Date())=>parseSidraGdp(input,'585','1550',1_000_000,now).filter(point=>point.value>=0);
 export const ECONOMIC_SERIES=[
  {key:'inflation',series:13522,label:'Inflação · IPCA',unit:'% em 12 meses',description:'Variação dos preços ao consumidor. Referência mensal.',source:'IBGE / Banco Central'},
  {key:'interest',series:432,label:'Juros · meta Selic',unit:'% ao ano',description:'Meta definida pelo Copom; influencia crédito e financiamento.',source:'Banco Central'},
