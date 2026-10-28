@@ -62,8 +62,6 @@ export function createSimulationPdf(report:SimulationReport):jsPDF {
  text(`${report.checked.length} de ${report.checked.length+report.unchecked.length} verificações confirmadas`,9,false,muted);
  bullets(report.checked,'[OK]');bullets(report.unchecked.map(x=>`${x} - não confirmado`),'[ ]');
  if(report.alerts.length){section('Alertas e pendências');bullets(report.alerts,'!')}
- section('Fontes para conferência');
- for(const source of report.sources){text(source.name,9,true,ink,1);text(source.url,8,false,muted,1);y+=2;}
  section('Aviso importante');
  text('Este relatório apresenta uma simulação educacional baseada em dados fornecidos pelo usuário. Não constitui cotação comercial, declaração aduaneira, classificação fiscal vinculante nem cálculo tributário oficial. Confira alíquotas, bases de cálculo, documentação, Incoterms e exigências com as autoridades competentes.',8,false,muted);
  const pages=doc.getNumberOfPages();
