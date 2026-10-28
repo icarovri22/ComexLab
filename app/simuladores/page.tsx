@@ -73,8 +73,10 @@ function CountryPicker({id,label,value,onChange}:{id:string;label:string;value:s
         ref={inputRef}
         id={`${id}-country`}
         role="combobox"
-        type="search"
+        type="text"
         autoComplete="off"
+        autoCorrect="off"
+        spellCheck={false}
         aria-autocomplete="list"
         aria-expanded={open}
         aria-controls={`${id}-options`}
