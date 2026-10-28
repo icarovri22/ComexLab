@@ -515,6 +515,13 @@ export default function Simuladores(){
     goToStep(step+1);
   }
 
+  function clearFields(){
+    if(savingReport.current||!storageReady)return;
+    startNewSimulation();
+    setOp(op);
+    setStorageNotice('Campos limpos. Preencha uma nova operação; seu histórico foi preservado.');
+  }
+
   function previousStep(){
     goToStep(step-1);
   }
@@ -596,7 +603,10 @@ export default function Simuladores(){
   return <><div className="simulator-page">
     <div className="flex-head page-heading"><div><span className="eyebrow">FERRAMENTAS · SIMULADORES</span><h1>Simule com clareza.</h1>
       <p className="page-lead">Uma decisão por etapa. Seu painel acompanha os custos da operação.</p></div>
-      <a className="sim-history-link" href="#simulation-history" onClick={()=>{document.getElementById('simulation-history')?.setAttribute('open','')}}>Histórico de simulações</a>
+      <div style={{display:'flex',alignItems:'center',gap:14,flexWrap:'wrap'}}>
+        <button type="button" className="btn secondary" onClick={clearFields} disabled={!storageReady||reportSaving}><RefreshCcw size={16} aria-hidden="true"/> Limpar campos</button>
+        <a className="sim-history-link" href="#simulation-history" onClick={()=>{document.getElementById('simulation-history')?.setAttribute('open','')}}>Histórico de simulações</a>
+      </div>
     </div>
     <div className="segmented" role="tablist" aria-label="Perspectiva da operação">
       <button role="tab" aria-selected={op==='import'} className={op==='import'?'selected':''} onClick={()=>changeOperation('import')}>Visão de importação</button>
