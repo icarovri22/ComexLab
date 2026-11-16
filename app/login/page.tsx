@@ -4,7 +4,6 @@ import {accountFetch} from '../../lib/account-fetch';
 import {useEffect,useState,type FormEvent} from 'react';
 import Link from 'next/link';
 import BrandLogo from '../../components/BrandLogo';
-import ThemePicker from '../../components/ThemePicker';
 import {ArrowRight,BookOpen,CheckCircle2,Eye,EyeOff,Globe2,LockKeyhole,LogOut,ShieldCheck,UserRound,UserPlus} from 'lucide-react';
 
 type Mode='login'|'register';
@@ -74,7 +73,7 @@ export default function Login(){
   return <div className="auth-page">
     <header className="auth-header">
       <Link href="/" className="auth-logo" aria-label="ComexHub — início"><BrandLogo/></Link>
-      <div className="auth-header-utilities"><span className="auth-header-caption">Plataforma de aprendizagem em Comércio Exterior</span><ThemePicker/></div>
+      <div className="auth-header-utilities"><span className="auth-header-caption">Plataforma de aprendizagem em Comércio Exterior</span></div>
     </header>
     <main className="auth-content">
       <section className="auth-aside" aria-label="Apresentação do ComexHub">
