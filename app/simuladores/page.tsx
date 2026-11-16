@@ -397,7 +397,7 @@ export default function Simuladores(){
   ];
 
   function generateReport(){
-    if(savingReport.current)return;
+    if(savingReport.current||!combinedReady)return;
     const unitCost=(label:string,amount:number):{label:string;value:string}=>({label,value:formatUsd(amount)});
     const moneyOrPending=(value:number|null)=>value===null?'Pendente':formatUsd(value);
     const taxValues:{label:string;value:string}[]=brazilTax?[
@@ -448,7 +448,8 @@ export default function Simuladores(){
         {label:'Código NCM/HS informado',value:ncm.trim()||'Não informado'},
         {label:'Quantidade comercial',value:`${qty} · ${quantityLabel}`} ,
         {label:'Preço por unidade comercial (USD)',value:`${formatUsd(numberFrom(unit))} / ${quantityLabel}`} ,
-        {label:'Transporte',value:modeLabel},
+        {label:'Transporte',value:modal},
+        ...(modal==='Multimodal'?[{label:'Modais selecionados',value:restoreModes(combinedModes).join(' + ')}]:[]),
         ...(seaLeg?[{label:'Porto de embarque',value:loadingPort?formatPort(loadingPort):'Ainda não definido'},{label:'Porto de desembarque',value:dischargePort?formatPort(dischargePort):'Ainda não definido'}]:[]),
         {label:'Incoterm® 2020',value:incoterm.name},
         {label:'Valor da mercadoria (USD)',value:formatUsd(prices.goods)},
@@ -626,7 +627,7 @@ export default function Simuladores(){
         <div className="wizard-nav">
           <button type="button" className="btn secondary" onClick={previousStep} disabled={step===0}>Etapa anterior</button>
           <span className="wizard-nav-copy">{step+1} / {steps.length}</span>
-          {step<steps.length-1?<button type="button" className="btn" onClick={nextStep}>Próxima etapa</button>:<button type="button" className="btn" onClick={generateReport} disabled={reportSaving}><FileText size={18}/>{reportSaving?'Salvando…':report?'Salvar alterações no relatório':'Gerar relatório'}</button>}
+          {step<steps.length-1?<button type="button" className="btn" onClick={nextStep}>Próxima etapa</button>:<button type="button" className="btn" onClick={generateReport} disabled={reportSaving||!combinedReady}><FileText size={18}/>{reportSaving?'Salvando…':report?'Salvar alterações no relatório':'Gerar relatório'}</button>}
         </div>
       </div>
       <aside className="sim-summary"><div className="panel sticky"><span className="eyebrow">PAINEL DA SIMULAÇÃO</span><h2 className="trade-route">{originMarket?.name??originCode} <ArrowLeftRight size={20}/> {destinationMarket?.name??destinationCode}</h2>

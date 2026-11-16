@@ -41,7 +41,11 @@ export default function WelcomeTour({owner,request}:{owner:string|null;request:n
  },[phase,close]);
  useLayoutEffect(()=>{
   if(phase!=='tour')return;
-  const element=document.querySelector<HTMLElement>(`[data-tour-target="${current.target}"]`);
+  const element=Array.from(document.querySelectorAll<HTMLElement>(`[data-tour-target="${current.target}"]`)).find(candidate=>{
+   const menu=candidate.closest<HTMLDetailsElement>(".mobile-explore");
+   if(menu&&menu.getClientRects().length)menu.open=true;
+   return candidate.getClientRects().length>0;
+  });
   if(!element){setTarget(null);return}
   element.scrollIntoView({block:'nearest',inline:'nearest',behavior:'auto'});
   const measure=()=>{
