@@ -11,3 +11,8 @@ export const paletteKey=(owner:string)=>`comexhub:appearance:${owner}`;
 export function readPalette(storage:Pick<Storage,'getItem'>,owner:string):Palette{
  try{const value=storage.getItem(paletteKey(owner));return validPalette(value)?value:'original'}catch{return 'original'}
 }
+
+export const loginPaletteKey='comexhub:login-palette';
+export function readLoginPalette(storage:Pick<Storage,'getItem'>):Palette{
+ try{const value=storage.getItem(loginPaletteKey);return validPalette(value)?value:'original'}catch{return 'original'}
+}

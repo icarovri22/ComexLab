@@ -3,6 +3,7 @@ import {accountFetch} from '../../lib/account-fetch';
 
 import {useEffect,useState,type FormEvent} from 'react';
 import Link from 'next/link';
+import {readLoginPalette,loginPaletteKey} from '../../lib/appearance';
 import BrandLogo from '../../components/BrandLogo';
 import {ArrowRight,BookOpen,CheckCircle2,Eye,EyeOff,Globe2,LockKeyhole,LogOut,ShieldCheck,UserRound,UserPlus} from 'lucide-react';
 
@@ -31,6 +32,13 @@ export default function Login(){
       .then(r=>{if(!r.ok)throw Error('Falha na conexão.');return r.json()})
       .then(setMe)
       .catch(()=>setMe({ready:false,loggedIn:false}));
+  },[]);
+
+  useEffect(()=>{
+    const apply=()=>{try{document.documentElement.dataset.palette=readLoginPalette(window.localStorage)}catch{}};
+    const sync=(event:StorageEvent)=>{if(event.key===loginPaletteKey||event.key===null)apply()};
+    apply();window.addEventListener('storage',sync);
+    return ()=>{window.removeEventListener('storage',sync);document.documentElement.dataset.palette='original'};
   },[]);
 
   async function send(event:FormEvent<HTMLFormElement>){
