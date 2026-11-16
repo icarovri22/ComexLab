@@ -1,4 +1,5 @@
 'use client';
+import {useLanguage} from '../../components/LanguageProvider';
 import {accountFetch} from '../../lib/account-fetch';
 
 import {useEffect,useMemo,useRef,useState} from 'react';
@@ -125,7 +126,7 @@ function Num({name,value,set,desc,kind='currency',suffix}:{name:string;value:str
   </label>;
 }
 
-export default function Simuladores(){
+export default function Simuladores(){ const {t}=useLanguage();
   const [op,setOp]=useState<Operation>('import');
   const [originCode,setOriginCode]=useState('CN');
   const [destinationCode,setDestinationCode]=useState('BR');
@@ -183,7 +184,7 @@ export default function Simuladores(){
           if(typeof saved.destinationCode==='string')setDestinationCode(saved.destinationCode);
           if(typeof saved.product==='string')setProduct(saved.product);
           if(typeof saved.ncm==='string')setNcm(saved.ncm);
-          if(typeof saved.modal==='string'&&(TRANSPORT_MODES.some(m=>m===saved.modal)||saved.modal==='Multimodal'))setModal(saved.modal);
+          if(typeof saved.modal==='string'&&(TRANSPORT_MODES.some(m=>m===saved.modal)||saved.modal===t("Multimodal")))setModal(saved.modal);
           if(Array.isArray(saved.combinedModes))setCombinedModes(restoreModes(saved.combinedModes));
           setLoadingPort(restorePort(saved.loadingPort));setDischargePort(restorePort(saved.dischargePort));
           if(typeof saved.quantityUnit==='string'&&COMMERCIAL_UNITS.some(u=>u.code===saved.quantityUnit))setQuantityUnit(saved.quantityUnit);
@@ -290,9 +291,9 @@ export default function Simuladores(){
   const modeLabel=transportLabel(modal,combinedModes);
   const quantityLabel=commercialUnitLabel(quantityUnit,quantityOther);
   const quantitySymbol=COMMERCIAL_UNITS.find(u=>u.code===quantityUnit)?.symbol||'un.';
-  const combinedReady=modal!=='Multimodal'||combinedModes.length>=2;
+  const combinedReady=modal!==t("Multimodal")||combinedModes.length>=2;
   const transitNeedsConnection=seaLeg&&portConnectionNeeded(originCode,destinationCode,loadingPort?.country,dischargePort?.country);
-  const connected=!transitNeedsConnection||(modal==='Multimodal'&&combinedModes.some(m=>m==='Rodoviário'||m==='Ferroviário'||m==='Aéreo'||m==='Fluvial'));
+  const connected=!transitNeedsConnection||(modal===t("Multimodal")&&combinedModes.some(m=>m==='Rodoviário'||m==='Ferroviário'||m==='Aéreo'||m==='Fluvial'));
   const compatible=isCompatible(term,modal,combinedModes)&&combinedReady&&connected;
   const countryLinks=useMemo(()=>tariffReferences(originCode,destinationCode),[originCode,destinationCode]);
   const prices=useMemo(()=>({
@@ -479,12 +480,12 @@ export default function Simuladores(){
   }
 
   const steps=[
-    {id:'route',short:'Rota',title:'Origem, destino e produto'},
-    {id:'terms',short:'Condições',title:'Modal e Incoterm® 2020'},
-    {id:'costs',short:'Custos',title:'Custos logísticos estimados'},
-    {id:'taxes',short:'Tributos',title:`Tributação em ${destinationMarket?.name??destinationCode}`},
-    {id:'checklist',short:'Conferência',title:'Conferências internacionais'},
-    {id:'result',short:'Resultado',title:'Resultado final e relatório'},
+    {id:'route',short:t("Rota"),title:t("Origem, destino e produto")},
+    {id:'terms',short:t("Condições"),title:t("Modal e Incoterm® 2020")},
+    {id:'costs',short:t("Custos"),title:t("Custos logísticos estimados")},
+    {id:'taxes',short:t("Tributos"),title:`Tributação em ${destinationMarket?.name??destinationCode}`},
+    {id:'checklist',short:t("Conferência"),title:t("Conferências internacionais")},
+    {id:'result',short:t("Resultado"),title:t("Resultado final e relatório")},
   ] as const;
   const currentStep=steps[step];
 
@@ -528,7 +529,7 @@ export default function Simuladores(){
   }
 
   function renderStep(){
-    if(currentStep.id==='route')return <section className="panel wizard-panel"><span className="eyebrow">ETAPA 01</span><h2>Origem, destino e produto</h2>
+    if(currentStep.id==='route')return <section className="panel wizard-panel"><span className="eyebrow">ETAPA 01</span><h2>{""+t("Origem, destino e produto")+""}</h2>
       <p className="page-lead">Defina a rota da operação, a mercadoria e os valores básicos da venda antes de seguir para as demais configurações.</p>
       <details className="minimal-disclosure"><summary>Como preencher quantidades e valores</summary><p className="help sim-units-note"><strong>Quantidade:</strong> número na unidade comercial escolhida, como kg, pares ou caixas. <strong>US$:</strong> dinheiro em dólares. <strong>R$/US$:</strong> cotação do dólar em reais. Digite somente números.</p></details>
       <div className="market-pair">
@@ -549,7 +550,7 @@ export default function Simuladores(){
       <p className="help">Pesquise diretamente pelo nome ou sigla, com bandeiras para identificar os países e territórios. Os preços são simulados em USD, inclusive entre países fora do Brasil. O código HS é harmonizado até seis dígitos; o país importador pode exigir detalhamento próprio.</p>
     </section>;
 
-    if(currentStep.id==='terms')return <section className="panel wizard-panel"><span className="eyebrow">ETAPA 02</span><h2>Modal e Incoterm® 2020</h2>
+    if(currentStep.id==='terms')return <section className="panel wizard-panel"><span className="eyebrow">ETAPA 02</span><h2>{""+t("Modal e Incoterm® 2020")+""}</h2>
       <p className="page-lead">Escolha como a mercadoria será transportada e defina a regra Incoterm que distribui custos, riscos e responsabilidades.</p>
       <div className="grid-2"><label className="field"><span className="label">Como a mercadoria vai viajar?</span><select className="select" value={modal} onChange={e=>setModal(e.target.value)}>{[...TRANSPORT_MODES,'Multimodal'].map(x=><option key={x} value={x}>{x==='Multimodal'?'Combinar modais':x}</option>)}</select></label>
         <label className="field"><span className="label">Incoterm® 2020</span><select className="select" value={term} onChange={e=>setTerm(e.target.value)}>{INCOTERMS.map(x=><option key={x.code} value={x.code}>{x.code} — {x.name.split(' — ')[1]}</option>)}</select></label></div>
@@ -587,7 +588,7 @@ export default function Simuladores(){
       <span className="mini-tag"><CheckCheck size={15}/>{checked.length} de {checklist.length} verificações feitas</span>
     </section>;
 
-    return <section className="panel wizard-panel"><span className="eyebrow">ETAPA 06</span><h2>Resultado final e relatório</h2>
+    return <section className="panel wizard-panel"><span className="eyebrow">ETAPA 06</span><h2>{""+t("Resultado final e relatório")+""}</h2>
       <p className="page-lead">Confira o resumo da operação e gere um relatório com rota, mercadoria, Incoterm, custos, impostos estimados e checklist. Depois, escolha “Imprimir” ou “Baixar PDF”. O arquivo usa o layout da prévia.</p>
       <div className="grid-2 wizard-final-grid">
         <div className="info"><strong>Rota e configuração</strong><p style={{margin:'8px 0 0'}}>{originMarket?.name??originCode} ({originCode}) → {destinationMarket?.name??destinationCode} ({destinationCode})<br/>{modeLabel} · {incoterm.name}<br/>Mercadoria: {product}</p></div>
@@ -602,16 +603,16 @@ export default function Simuladores(){
   }
 
   return <><div className="simulator-page">
-    <div className="flex-head page-heading"><div><span className="eyebrow">FERRAMENTAS · SIMULADORES</span><h1>Simule com clareza.</h1>
-      <p className="page-lead">Uma decisão por etapa. Seu painel acompanha os custos da operação.</p></div>
+    <div className="flex-head page-heading"><div><span className="eyebrow">{""+t("FERRAMENTAS · SIMULADORES")+""}</span><h1>{""+t("Simule com clareza.")+""}</h1>
+      <p className="page-lead">{""+t("Uma decisão por etapa. Seu painel acompanha os custos da operação.")+""}</p></div>
       <div style={{display:'flex',alignItems:'center',gap:14,flexWrap:'wrap'}}>
-        <button type="button" className="btn secondary" onClick={clearFields} disabled={!storageReady||reportSaving}><RefreshCcw size={16} aria-hidden="true"/> Limpar campos</button>
-        <a className="sim-history-link" href="#simulation-history" onClick={()=>{document.getElementById('simulation-history')?.setAttribute('open','')}}>Histórico de simulações</a>
+        <button type="button" className="btn secondary" onClick={clearFields} disabled={!storageReady||reportSaving}><RefreshCcw size={16} aria-hidden="true"/>{" "+t("Limpar campos")+""}</button>
+        <a className="sim-history-link" href="#simulation-history" onClick={()=>{document.getElementById('simulation-history')?.setAttribute('open','')}}>{""+t("Histórico de simulações")+""}</a>
       </div>
     </div>
     <div className="segmented" role="tablist" aria-label="Perspectiva da operação">
-      <button role="tab" aria-selected={op==='import'} className={op==='import'?'selected':''} onClick={()=>changeOperation('import')}>Visão de importação</button>
-      <button role="tab" aria-selected={op==='export'} className={op==='export'?'selected':''} onClick={()=>changeOperation('export')}>Visão de exportação</button>
+      <button role="tab" aria-selected={op==='import'} className={op==='import'?'selected':''} onClick={()=>changeOperation('import')}>{""+t("Visão de importação")+""}</button>
+      <button role="tab" aria-selected={op==='export'} className={op==='export'?'selected':''} onClick={()=>changeOperation('export')}>{""+t("Visão de exportação")+""}</button>
     </div>
     <p className="help operation-hint">{op==='import'?'Perspectiva de quem compra e recebe a mercadoria no país de destino.':'Perspectiva de quem vende e despacha a mercadoria no país de origem.'} Você pode escolher qualquer par de países; alterar a perspectiva não muda a rota selecionada.</p>
 
@@ -625,9 +626,9 @@ export default function Simuladores(){
         </section>
         <div id="sim-step-content" tabIndex={-1}>{renderStep()}</div>
         <div className="wizard-nav">
-          <button type="button" className="btn secondary" onClick={previousStep} disabled={step===0}>Etapa anterior</button>
+          <button type="button" className="btn secondary" onClick={previousStep} disabled={step===0}>{""+t("Etapa anterior")+""}</button>
           <span className="wizard-nav-copy">{step+1} / {steps.length}</span>
-          {step<steps.length-1?<button type="button" className="btn" onClick={nextStep}>Próxima etapa</button>:<button type="button" className="btn" onClick={generateReport} disabled={reportSaving||!combinedReady}><FileText size={18}/>{reportSaving?'Salvando…':report?'Salvar alterações no relatório':'Gerar relatório'}</button>}
+          {step<steps.length-1?<button type="button" className="btn" onClick={nextStep}>{""+t("Próxima etapa")+""}</button>:<button type="button" className="btn" onClick={generateReport} disabled={reportSaving||!combinedReady}><FileText size={18}/>{reportSaving?'Salvando…':report?'Salvar alterações no relatório':t("Gerar relatório")}</button>}
         </div>
       </div>
       <aside className="sim-summary"><div className="panel sticky"><span className="eyebrow">PAINEL DA SIMULAÇÃO</span><h2 className="trade-route">{originMarket?.name??originCode} <ArrowLeftRight size={20}/> {destinationMarket?.name??destinationCode}</h2>
