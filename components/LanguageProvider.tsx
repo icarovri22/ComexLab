@@ -1,6 +1,7 @@
 'use client';
 import {createContext,useContext,useEffect,useState,type ReactNode} from 'react';
 import {english} from '../lib/english';
+import {reportEnglish} from '../lib/report-english';
 export type Language='pt-BR'|'en';
 const key='comexhub:language';
 const Context=createContext({language:'pt-BR' as Language,setLanguage:(_value:Language)=>{},t:(value:string)=>value});
@@ -15,5 +16,5 @@ export default function LanguageProvider({children}:{children:ReactNode}){
  },[]);
  useEffect(()=>{document.documentElement.lang=language},[language]);
  const setLanguage=(value:Language)=>{try{localStorage.setItem(key,value)}catch{}update(value)};
- return <Context.Provider value={{language,setLanguage,t:value=>language==='en'?(english[value]??value):value}}>{children}</Context.Provider>;
+ return <Context.Provider value={{language,setLanguage,t:value=>language==='en'?(english[value]??reportEnglish[value]??value):value}}>{children}</Context.Provider>;
 }
