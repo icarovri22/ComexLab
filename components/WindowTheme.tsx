@@ -15,6 +15,8 @@ export default function WindowTheme(){
   };
   const observer=new MutationObserver(update);
   observer.observe(root,{attributes:true,attributeFilter:['data-palette']});
+  // Navigation can replace the viewport metadata without changing the palette.
+  observer.observe(document.head,{childList:true,subtree:true,attributes:true,attributeFilter:['name','content']});
   update();
   return()=>observer.disconnect();
  },[]);
