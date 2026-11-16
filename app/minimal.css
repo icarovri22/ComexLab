@@ -237,3 +237,14 @@ html[data-theme="dark"]{--workspace-bg:#1B1918;--workspace-panel:#24211F;--works
  .minimal-shell .main-frame>.mobile-account{border-top:1px solid var(--line);padding-top:14px}
  .mobile-admin-link{display:flex;align-items:center;gap:8px;min-height:44px;color:var(--primary)}
 }
+
+/* The mobile account panel is in the content column, not the sidebar grid. */
+@media(max-width:770px){
+ .minimal-shell .main-frame>.mobile-account{align-self:stretch;min-width:0;margin-inline:20px}
+ .minimal-shell .mobile-account .account-menu{width:100%}
+ .minimal-shell .mobile-account .mobile-admin-link{padding-inline:12px;text-decoration:none}
+ .minimal-shell .mobile-account .shell-signout{min-height:44px;margin:4px 0 0}
+}
+@media(max-width:420px){
+ .minimal-shell .main-frame>.mobile-account{margin-inline:14px}
+}
