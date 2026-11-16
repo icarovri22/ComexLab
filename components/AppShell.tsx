@@ -3,9 +3,8 @@ import {accountFetch} from '../lib/account-fetch';
 import Link from 'next/link';
 import {useEffect,useState} from 'react';
 import {usePathname} from 'next/navigation';
-import {LayoutDashboard,ArrowLeftRight,BookOpen,Search,UserRound,ShieldCheck,MessageSquareHeart,Newspaper,Mail,Settings2} from 'lucide-react';
+import {LayoutDashboard,ArrowLeftRight,BookOpen,Search,UserRound,ShieldCheck,MessageSquareHeart,Newspaper,Mail,Settings2,LogOut} from 'lucide-react';
 import BrandLogo from './BrandLogo';
-import ThemePicker from './ThemePicker';
 import AppearanceProvider from './AppearanceProvider';
 import WelcomeTour from './WelcomeTour';
 import {isPublicAuthPage} from '../lib/auth-pages';
@@ -21,12 +20,23 @@ export default function AppShell({children}:{children:React.ReactNode}){
  const [tourRequest,setTourRequest]=useState(0);
  const [owner,setOwner]=useState<string|null>(null);
  const [notice,setNotice]=useState('');
+ const [signingOut,setSigningOut]=useState(false);
+ const [logoutError,setLogoutError]=useState('');
+ async function signOut(){
+  if(signingOut)return;
+  setSigningOut(true);setLogoutError('');
+  try{
+   const response=await accountFetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'logout'})});
+   if(!response.ok)throw new Error();
+   window.location.replace('/login');
+  }catch{setLogoutError('Não foi possível sair. Tente novamente.');setSigningOut(false)}
+ }
  useEffect(()=>{let mounted=true;Promise.all([accountFetch('/api/auth',{cache:'no-store'}).then(r=>r.json()),accountFetch('/api/site',{cache:'no-store'}).then(r=>r.json())]).then(([user,settings])=>{if(!mounted)return;setOwner(user?.loggedIn&&typeof user.username==='string'?user.username:null);setAdmin(user?.isAdmin===true);setNotice(String(settings?.announcement||''));if(user?.ready===true&&user?.loggedIn===false&&!isPublicAuthPage(pathname))window.location.replace('/login')}).catch(()=>{});return()=>{mounted=false}},[pathname]);
  if(isPublicAuthPage(pathname))return <>{children}</>;
  return <AppearanceProvider owner={owner}><div className="shell minimal-shell"><a className="skip-content" href="#main-content">Ir para o conteúdo</a><aside className="sidebar">
   <Link href="/" className="brand" aria-label="ComexHub — página inicial"><BrandLogo/></Link>
   <details className="mobile-explore" key={pathname} open={pathname==='/'}><summary>Explorar o ComexHub</summary><nav className="mobile-directory" aria-label="Explorar o ComexHub">{groups.flatMap(g=>g.pages).map((p,index)=><Link key={p.href} href={p.href} data-tour-target={p.href} aria-current={pathname===p.href?'page':undefined}><p.icon size={19} aria-hidden="true"/><span>{p.label}<small>{mobileDescriptions[index]}</small></span></Link>)}{admin&&<Link href="/admin"><ShieldCheck size={19}/> Administração</Link>}</nav></details>
   <nav className="nav-list" aria-label="Navegação principal">{groups.map(group=><div className="nav-group" key={group.label}><span className="nav-group-label">{group.label}</span>{group.pages.map(p=><Link key={p.href} data-tour-target={p.href} href={p.href} aria-current={pathname===p.href?'page':undefined} className={pathname===p.href?'active':''}><p.icon size={18} aria-hidden="true"/><span>{p.label}</span></Link>)}</div>)}{admin&&<Link href="/admin" aria-current={pathname==='/admin'?'page':undefined} className={pathname==='/admin'?'active':''}><ShieldCheck size={18}/><span>Administração</span></Link>}</nav>
-  <div className="sidebar-bottom"><details className="account-menu" key={pathname} open={pathname==='/seguranca'||pathname==='/avaliar'||pathname==='/configuracoes'}><summary data-tour-target="conta"><UserRound size={17} aria-hidden="true"/> Conta e Ajuda</summary><nav aria-label="Conta e Ajuda"><Link href="/configuracoes" aria-current={pathname==='/configuracoes'?'page':undefined} className={pathname==='/configuracoes'?'active':''}><Settings2 size={18} aria-hidden="true"/><span>Configurações</span></Link><Link href="/login"><UserRound size={16}/> Minha conta</Link><Link href="/seguranca" aria-current={pathname==='/seguranca'?'page':undefined}><ShieldCheck size={16}/> Segurança</Link><Link href="/avaliar" aria-current={pathname==='/avaliar'?'page':undefined}><MessageSquareHeart size={16}/> Avaliar e sugerir</Link><button type="button" className="account-tour-link" onClick={()=>setTourRequest(n=>n+1)}><BookOpen size={16}/> Conhecer o app</button><a href="mailto:comexhub.contato@gmail.com"><Mail size={16}/> Contato</a></nav></details><small>Versão 1.9.4 · Educacional</small></div>
- </aside><div className="main-frame">{notice&&<div className="site-announcement" role="status">{notice}</div>}<header className="topbar"><span>Seu hub de aprendizados em comércio exterior</span><div className="topbar-actions"><ThemePicker/></div></header><main className="content" id="main-content" tabIndex={-1}>{children}</main><footer className="footer"><span>ComexHub · Ferramenta de estudo. Valide dados fiscais nas fontes oficiais.</span><span>Desenvolvido por <strong>Hanna Roncel, Ícaro Pinheiro e Mirelly Lopes</strong>.</span><a href="mailto:comexhub.contato@gmail.com">comexhub.contato@gmail.com</a></footer></div><WelcomeTour owner={owner} request={tourRequest}/></div></AppearanceProvider>;
+  <div className="sidebar-bottom"><details className="account-menu" key={pathname} open={pathname==='/seguranca'||pathname==='/avaliar'||pathname==='/configuracoes'}><summary data-tour-target="conta"><UserRound size={17} aria-hidden="true"/> Conta e Ajuda</summary><nav aria-label="Conta e Ajuda"><Link href="/configuracoes" aria-current={pathname==='/configuracoes'?'page':undefined} className={pathname==='/configuracoes'?'active':''}><Settings2 size={18} aria-hidden="true"/><span>Configurações</span></Link><Link href="/login"><UserRound size={16}/> Minha conta</Link><Link href="/seguranca" aria-current={pathname==='/seguranca'?'page':undefined}><ShieldCheck size={16}/> Segurança</Link><Link href="/avaliar" aria-current={pathname==='/avaliar'?'page':undefined}><MessageSquareHeart size={16}/> Avaliar e sugerir</Link><button type="button" className="account-tour-link" onClick={()=>setTourRequest(n=>n+1)}><BookOpen size={16}/> Conhecer o app</button><a href="mailto:comexhub.contato@gmail.com"><Mail size={16}/> Contato</a></nav></details>{owner&&<button type="button" className="shell-signout" onClick={signOut} disabled={signingOut}><LogOut size={16} aria-hidden="true"/> {signingOut?"Saindo…":"Sair"}</button>}{logoutError&&<p className="help" role="alert">{logoutError}</p>}<small>Versão 1.9.4 · Educacional</small></div>
+ </aside><div className="main-frame">{notice&&<div className="site-announcement" role="status">{notice}</div>}<header className="topbar"><span>Seu hub de aprendizados em comércio exterior</span></header><main className="content" id="main-content" tabIndex={-1}>{children}</main><footer className="footer"><span>ComexHub · Ferramenta de estudo. Valide dados fiscais nas fontes oficiais.</span><span>Desenvolvido por <strong>Hanna Roncel, Ícaro Pinheiro e Mirelly Lopes</strong>.</span><a href="mailto:comexhub.contato@gmail.com">comexhub.contato@gmail.com</a></footer></div><WelcomeTour owner={owner} request={tourRequest}/></div></AppearanceProvider>;
 }

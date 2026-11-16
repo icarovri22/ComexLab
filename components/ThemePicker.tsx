@@ -13,17 +13,27 @@ export function applyTheme(choice:ThemeChoice){
   document.documentElement.style.colorScheme=actual;
 }
 
+export function ThemeSync(){
+  useEffect(()=>{
+    const media=window.matchMedia('(prefers-color-scheme: dark)');
+    const sync=()=>{let stored:string|null=null;try{stored=window.localStorage.getItem(STORE)}catch{}applyTheme(valid(stored)?stored:'system')};
+    sync();
+    media.addEventListener('change',sync);
+    window.addEventListener('storage',sync);
+    return ()=>{media.removeEventListener('change',sync);window.removeEventListener('storage',sync)};
+  },[]);
+  return null;
+}
+
 export default function ThemePicker(){
   const [choice,setChoice]=useState<ThemeChoice>('system');
   useEffect(()=>{
     let saved:ThemeChoice='system';
     try {const stored=window.localStorage.getItem(STORE);saved=valid(stored)?stored:'system';}catch{}
     setChoice(saved);
-    applyTheme(saved);
-    const media=window.matchMedia('(prefers-color-scheme: dark)');
-    const update=()=>{try{if((window.localStorage.getItem(STORE)||'system')==='system')applyTheme('system')}catch{applyTheme('system')}};
-    media.addEventListener('change',update);
-    return ()=>media.removeEventListener('change',update);
+    const sync=()=>{try{const stored=window.localStorage.getItem(STORE);setChoice(valid(stored)?stored:'system')}catch{}};
+    window.addEventListener('storage',sync);
+    return ()=>window.removeEventListener('storage',sync);
   },[]);
   const update=(next:ThemeChoice)=>{
     setChoice(next);

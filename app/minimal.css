@@ -193,3 +193,8 @@ html[data-theme="dark"]{--workspace-bg:#1B1918;--workspace-panel:#24211F;--works
  .minimal-shell .sidebar-bottom .account-menu{position:relative}
  .minimal-shell .sidebar-bottom .account-menu>nav{position:absolute;right:0;top:100%;width:205px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px;z-index:10}
 }
+
+.shell-signout{display:flex;align-items:center;gap:9px;min-height:44px;padding:8px 0;border:0;background:none;color:var(--muted);font:inherit;cursor:pointer}
+.shell-signout:hover{color:var(--primary)}
+.shell-signout:disabled{cursor:wait}
+@media(max-width:770px){.minimal-shell .sidebar-bottom{align-self:start}.shell-signout{margin-left:auto;min-height:38px}.minimal-shell .sidebar-bottom [role=alert]{max-width:130px}}
