@@ -215,3 +215,10 @@ html[data-theme="dark"]{--workspace-bg:#1B1918;--workspace-panel:#24211F;--works
  .mobile-directory>a>span{min-width:0}
  .minimal-shell .topbar{display:none}
 }
+
+.minimal-shell .mobile-account{display:none}
+@media(max-width:770px){
+ .minimal-shell .sidebar>.sidebar-bottom{display:none}
+ .minimal-shell .mobile-explore{grid-row:2}
+ .minimal-shell .main-frame>.mobile-account{display:block;margin:0 14px 16px;padding:0}
+}
