@@ -1,6 +1,6 @@
 'use client';
 import {createContext,useContext,useEffect,useState} from 'react';
-import {Palette,paletteKey,readPalette} from '../lib/appearance';
+import {Palette,paletteKey,readPalette,loginPaletteKey} from '../lib/appearance';
 const AppearanceContext=createContext<{palette:Palette;ready:boolean;save:(value:Palette)=>boolean}>({palette:'original',ready:false,save:()=>false});
 export const useAppearance=()=>useContext(AppearanceContext);
 export default function AppearanceProvider({owner,children}:{owner:string|null;children:React.ReactNode}){
@@ -18,6 +18,7 @@ export default function AppearanceProvider({owner,children}:{owner:string|null;c
  const save=(value:Palette)=>{
   if(!owner||loadedOwner!==owner)return false;
   try{window.localStorage.setItem(paletteKey(owner),value)}catch{return false}
+  try{window.localStorage.setItem(loginPaletteKey,value)}catch{}
   setPalette(value);document.documentElement.dataset.palette=value;return true;
  };
  return <AppearanceContext.Provider value={{palette,ready:Boolean(owner&&loadedOwner===owner),save}}>{children}</AppearanceContext.Provider>;
