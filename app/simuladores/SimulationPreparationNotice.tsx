@@ -1,7 +1,6 @@
 'use client';
 
 import {useEffect,useRef} from 'react';
-import Link from 'next/link';
 import {ClipboardList} from 'lucide-react';
 import './simulation-preparation.css';
 
@@ -29,7 +28,7 @@ export default function SimulationPreparationNotice(){
       <li><strong>Custos:</strong> cotação do frete, do seguro se houver e das demais despesas.</li>
       <li><strong>Tributos:</strong> alíquotas aplicáveis, consultadas em fontes oficiais.</li>
     </ul>
-    <p>Não sabe o código da mercadoria? Use a <Link href="/ncm" className="reference-link" onClick={()=>{rememberDismissal();dialog.current?.close();}}>Consulta NCM</Link> do ComexHub.</p>
+    <p>Não sabe o código da mercadoria? Você pode consultá-lo na seção <strong>Consulta NCM</strong> do próprio ComexHub.</p>
     <p className="help">Para praticar, você pode usar dados fictícios. Se não souber uma alíquota, deixe o campo em branco.</p>
     <form method="dialog"><button type="submit" className="btn">Entendi, continuar</button></form>
   </dialog>;
