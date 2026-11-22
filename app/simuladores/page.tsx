@@ -8,6 +8,7 @@ import {INCOTERMS,allocate,getIncoterm,isCompatible} from '../../lib/incoterms';
 import {calculateBrazilImport,calculateDestinationTax,formatBrl,formatUsd,numberFrom,hasRate} from '../../lib/calc';
 import SimulationReportView from './SimulationReportView';
 import SimulationHistory from './SimulationHistory';
+import SimulationPreparationNotice from './SimulationPreparationNotice';
 import PortPicker from '../../components/PortPicker';
 import {restorePort,formatPort,PORT_DATA_SOURCE,PORT_AUTHORITY_SOURCES,type Port} from '../../lib/ports';
 import {TRANSPORT_MODES,COMMERCIAL_UNITS,restoreModes,hasWaterLeg,transportLabel,commercialUnitLabel,connectPort,portConnectionNeeded} from '../../lib/transport';
@@ -602,6 +603,7 @@ export default function Simuladores(){
   }
 
   return <><div className="simulator-page">
+    <SimulationPreparationNotice/>
     <div className="flex-head page-heading"><div><span className="eyebrow">FERRAMENTAS · SIMULADORES</span><h1>Simule com clareza.</h1>
       <p className="page-lead">Uma decisão por etapa. Seu painel acompanha os custos da operação.</p></div>
       <div style={{display:'flex',alignItems:'center',gap:14,flexWrap:'wrap'}}>
