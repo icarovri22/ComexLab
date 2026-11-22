@@ -125,6 +125,42 @@ function Num({name,value,set,desc,kind='currency',suffix}:{name:string;value:str
   </label>;
 }
 
+function FreightInsuranceEstimator({onFreight,onInsurance}:{onFreight:(value:string)=>void;onInsurance:(value:string)=>void}){
+  const [billingUnits,setBillingUnits]=useState('');
+  const [freightRate,setFreightRate]=useState('');
+  const [insuredValue,setInsuredValue]=useState('');
+  const [insuranceRate,setInsuranceRate]=useState('');
+  const [feedback,setFeedback]=useState('');
+  const estimate=(rate:string,base:string,divisor=1)=>{
+    if(!hasRate(rate)||!hasRate(base)||numberFrom(base)<=0)return null;
+    const amount=numberFrom(rate)/divisor*numberFrom(base);
+    return Number.isFinite(amount)?amount:null;
+  };
+  const freightAmount=estimate(freightRate,billingUnits);
+  const insuranceAmount=estimate(insuranceRate,insuredValue,100);
+  return <details className="minimal-disclosure"><summary>Calcular frete e seguro com dados da cotação</summary>
+    <p className="help">Use os dados da transportadora ou da seguradora. O simulador faz a conta com os valores que você informar.</p>
+    <div className="grid-2">
+      <section aria-label="Cálculo do frete">
+        <h3>Frete</h3>
+        <Num name="Quantidade de unidades cobradas" value={billingUnits} set={setBillingUnits} kind="quantity" desc="Use a unidade da cotação, como contêiner, kg ou m³."/>
+        <Num name="Preço do frete por unidade (USD)" value={freightRate} set={setFreightRate}/>
+        <p className="help">Frete calculado: <strong>{freightAmount===null?'A calcular':formatUsd(freightAmount)}</strong></p>
+        <button type="button" className="btn secondary" disabled={freightAmount===null} onClick={()=>{if(freightAmount!==null){onFreight(freightAmount.toFixed(2));setFeedback('Frete aplicado à simulação.')}}}>Usar valor do frete</button>
+      </section>
+      <section aria-label="Cálculo do seguro">
+        <h3>Seguro</h3>
+        <Num name="Valor segurado (USD)" value={insuredValue} set={setInsuredValue}/>
+        <Num name="Taxa do seguro (%)" value={insuranceRate} set={setInsuranceRate} kind="percent"/>
+        <p className="help">Seguro calculado: <strong>{insuranceAmount===null?'A calcular':formatUsd(insuranceAmount)}</strong></p>
+        <button type="button" className="btn secondary" disabled={insuranceAmount===null} onClick={()=>{if(insuranceAmount!==null){onInsurance(insuranceAmount.toFixed(2));setFeedback('Seguro aplicado à simulação.')}}}>Usar valor do seguro</button>
+      </section>
+    </div>
+    <p className="help">O seguro calculado é o valor segurado multiplicado pela taxa informada. Se a cotação tiver prêmio mínimo ou outras cobranças, informe diretamente o valor total da proposta.</p>
+    <span role="status" className="help">{feedback}</span>
+  </details>;
+}
+
 export default function Simuladores(){
   const [op,setOp]=useState<Operation>('import');
   const [originCode,setOriginCode]=useState('CN');
@@ -564,8 +600,9 @@ export default function Simuladores(){
 
     if(currentStep.id==='costs')return <section className="panel wizard-panel"><span className="eyebrow">ETAPA 03</span><h2>Custos logísticos estimados (USD)</h2>
       <p className="page-lead">Informe os custos da cadeia logística para montar a base CIF e estimar a distribuição de despesas entre vendedor e comprador.</p>
-      <p className="help sim-units-note"><strong>Valores monetários:</strong> todos os campos desta etapa são em <strong>US$ (dólares)</strong>, não em porcentagem. Digite apenas o número.</p>
-      <div className="grid-2"><Num name="Frete internacional" value={freight} set={setFreight}/><Num name="Seguro internacional (se contratado)" value={insurance} set={setInsurance}/></div><details className="minimal-disclosure" open={[origin,loading,lastMile,unloading,fees].some(value=>numberFrom(value)!==0)}><summary>Outras despesas da operação</summary><div className="grid-2"><Num name="Despacho e entrega na origem" value={origin} set={setOrigin}/><Num name="Carregamento a bordo / movimentação" value={loading} set={setLoading}/><Num name="Transporte até o local nomeado" value={lastMile} set={setLastMile}/><Num name="Descarga no destino" value={unloading} set={setUnloading}/><Num name="Taxas locais e administrativas" value={fees} set={setFees}/></div></details>
+      <p className="help sim-units-note"><strong>Valores monetários:</strong> Os campos de custo são em <strong>US$ (dólares)</strong>. A calculadora indica quando usar quantidade ou porcentagem. Digite apenas o número.</p>
+      <div className="grid-2"><Num name="Frete internacional" value={freight} set={setFreight}/><Num name="Seguro internacional (se contratado)" value={insurance} set={setInsurance}/></div>
+      <FreightInsuranceEstimator onFreight={setFreight} onInsurance={setInsurance}/><details className="minimal-disclosure" open={[origin,loading,lastMile,unloading,fees].some(value=>numberFrom(value)!==0)}><summary>Outras despesas da operação</summary><div className="grid-2"><Num name="Despacho e entrega na origem" value={origin} set={setOrigin}/><Num name="Carregamento a bordo / movimentação" value={loading} set={setLoading}/><Num name="Transporte até o local nomeado" value={lastMile} set={setLastMile}/><Num name="Descarga no destino" value={unloading} set={setUnloading}/><Num name="Taxas locais e administrativas" value={fees} set={setFees}/></div></details>
       <p className="help">Categorias de custo ilustrativas, sem incluir todos os encargos e regimes de cada país. O preço unitário informado deve excluir despesas listadas separadamente para evitar dupla contagem.</p>
     </section>;
 
@@ -654,7 +691,9 @@ export default function Simuladores(){
         <p className="help">{op==='import'?'Visão do importador:':'Visão do exportador:'} simulação em USD, sem cálculo de taxas oficiais.</p>
 
         <div className="subline"><span>Mercadoria sem logística</span><strong>{formatUsd(prices.goods)}</strong></div>
-        <div className="subline"><span>Frete + seguro</span><strong>{formatUsd(prices.freight+prices.insurance)}</strong></div>
+        <div className="subline"><span>Frete internacional</span><strong>{hasRate(freight)?formatUsd(prices.freight):'Não informado'}</strong></div>
+        <div className="subline"><span>Seguro internacional</span><strong>{hasRate(insurance)?formatUsd(prices.insurance):'Não informado'}</strong></div>
+        <div className="subline"><span>Frete + seguro informados</span><strong>{formatUsd(prices.freight+prices.insurance)}</strong></div>
         <div className="subline"><span>Base CIF aproximada</span><strong>{formatUsd(customsBase)}</strong></div>
         <div className="subline"><span>Demais custos informados</span><strong>{formatUsd(prices.origin+prices.loading+prices.lastMile+prices.unloading+prices.fees)}</strong></div>
         <div className="subline"><span>Tributos estimados no destino</span><strong>{tax===null?'Pendente':formatUsd(tax)}</strong></div>
