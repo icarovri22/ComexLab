@@ -1,0 +1,11 @@
+.simulation-prep-dialog{width:min(34rem,calc(100% - 2rem));max-height:calc(100% - 2rem);overflow:auto;margin:auto;padding:clamp(18px,4vw,28px);border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--deep)}
+.simulation-prep-dialog::backdrop{background:rgba(var(--palette-shadow-rgb,56,36,31),.62)}
+.simulation-prep-dialog .eyebrow{display:flex;align-items:center;gap:8px;margin:0 0 8px;color:var(--primary)}
+.simulation-prep-dialog h2{margin:0 0 12px}
+.simulation-prep-dialog p,.simulation-prep-dialog ul{margin:0 0 12px}
+.simulation-prep-dialog ul{padding-inline-start:1.25rem}
+.simulation-prep-dialog li+li{margin-top:7px}
+.simulation-prep-dialog form{display:flex;justify-content:flex-end;margin-top:16px}
+.simulation-prep-dialog button{min-height:44px}
+@media(max-width:480px){.simulation-prep-dialog button{width:100%;justify-content:center}}
+@media print{.simulation-prep-dialog{display:none!important}}
