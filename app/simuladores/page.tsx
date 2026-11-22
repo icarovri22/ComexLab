@@ -569,17 +569,34 @@ export default function Simuladores(){
       <p className="help">Categorias de custo ilustrativas, sem incluir todos os encargos e regimes de cada país. O preço unitário informado deve excluir despesas listadas separadamente para evitar dupla contagem.</p>
     </section>;
 
-    if(currentStep.id==='taxes')return <section className="panel wizard-panel"><span className="eyebrow">ETAPA 04</span><h2>Tributação na entrada em {destinationMarket?.name??destinationCode}</h2>
+    if(currentStep.id==='taxes'){
+      const icmsPending=!hasRate(icms)||numberFrom(icms)>=100;
+      const federalPending=[ii,ipi,pis,cofins].some(rate=>!hasRate(rate));
+      const officialLinks=brazilTax?[
+        ...(federalPending?countryLinks.slice(0,2):[]),
+        ...(icmsPending?[{name:'Receita Federal — ICMS e secretarias estaduais',url:'https://www4.receita.fazenda.gov.br/simulador/glossario.html'}]:[]),
+      ]:destinationCode==='US'?[
+        ...(!hasRate(destDuty)?countryLinks.slice(0,1):[]),
+        ...(!hasRate(vat)?[{name:'CBP — impostos e taxas na importação',url:'https://cbpcomplaints.cbp.gov/s/article/Article-1225?language=en_US'}]:[]),
+      ]:countryLinks;
+      return <section className="panel wizard-panel"><span className="eyebrow">ETAPA 04</span><h2>Tributação na entrada em {destinationMarket?.name??destinationCode}</h2>
       <p className="page-lead">O país importador define as regras tributárias. Tarifas também dependem do <strong>produto, país de origem, acordos comerciais, preferências e data</strong>. Informe as taxas verificadas nas fontes oficiais; campo vazio significa não apurado (zero deve ser preenchido explicitamente).</p>
       <p className="help sim-units-note"><strong>Alíquotas (%):</strong> os campos abaixo são porcentagens, não valores em dinheiro. Por exemplo, digite <strong>12</strong> para indicar <strong>12%</strong>. Informe <strong>0</strong> quando a alíquota verificada for zero.</p>
       {brazilTax?<div className="grid-2"><Num name="II — Imposto de Importação (%)" value={ii} set={setIi} kind="percent"/><Num name="IPI (%)" value={ipi} set={setIpi} kind="percent"/><Num name="PIS-Importação (%)" value={pis} set={setPis} kind="percent"/><Num name="Cofins-Importação (%)" value={cofins} set={setCofins} kind="percent"/><Num name="ICMS (%)" value={icms} set={setIcms} kind="percent"/></div>
         :<div className="grid-2"><Num name="Tarifa aduaneira estimada no destino (%)" value={destDuty} set={setDestDuty} kind="percent"/><Num name="Imposto indireto no destino — IVA/VAT/GST (%)" value={vat} set={setVat} kind="percent"/></div>}
+      {international&&!taxCompleted&&<div className="info" aria-label="Consulta oficial de alíquotas pendentes">
+        <strong>Alíquotas pendentes? Consulte a fonte oficial.</strong>
+        <p className="help">Use o código da mercadoria, a origem e o destino na consulta. Volte para preencher as alíquotas verificadas. Se não confirmar o valor, deixe o campo em branco.</p>
+        {brazilTax&&icmsPending&&<p className="help">Para o ICMS, confira a regra na Secretaria da Fazenda do estado aplicável à operação.</p>}
+        {officialLinks.map(source=><p key={source.url}><a href={source.url} target="_blank" rel="noopener noreferrer" className="reference-link">{source.name} <ExternalLink size={14} aria-hidden="true"/></a></p>)}
+      </div>}
       {euInternal&&<div className="alert"><strong>Comércio intracomunitário da UE:</strong> verifique circulação livre de bens, IVA sobre operações intracomunitárias e requisitos específicos. O cálculo extracomunitário simplificado abaixo não deve ser utilizado automaticamente nessa rota.</div>}
       <details className="minimal-disclosure"><summary>Fontes e critérios de cálculo</summary><div className="info"><Info size={17} style={{verticalAlign:'middle',marginRight:7}}/>{brazilTax?'Modelo ilustrativo do Brasil: II sobre CIF estimado; IPI sobre CIF+II; PIS/Cofins sobre CIF; ICMS por dentro segundo as rubricas informadas. Bases efetivas dependem da legislação.':'Modelo genérico ilustrativo: tarifa sobre CIF estimado e IVA/VAT/GST sobre CIF mais tarifa. Cada país possui bases, exceções e cobranças próprias, não cobertas integralmente.'}</div>
       <div className="flex-head"><b style={{fontSize:13}}>Fontes referentes ao destino:</b></div>
       {countryLinks.map(x=><p key={x.name} style={{margin:'8px 0'}}><a href={x.url} target="_blank" rel="noopener noreferrer" className="reference-link">{x.name} <ExternalLink size={14}/></a></p>)}
       <p className="help">Confirme a classificação tarifária local, regras de origem, acordos preferenciais, medidas antidumping, cotas, licenças, tributos seletivos e sanções. Não há alíquota universal por país.</p></details>
     </section>;
+    }
 
     if(currentStep.id==='checklist')return <section className="panel wizard-panel"><span className="eyebrow">ETAPA 05</span><h2>Checklist internacional</h2>
       <p className="page-lead">Marque somente os itens já conferidos para essa operação. Ao trocar a origem ou o destino, as verificações e as alíquotas anteriores são limpas automaticamente.</p>
